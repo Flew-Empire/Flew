@@ -98,9 +98,27 @@ export const AdminManager = () => {
       "hwid.reset": "adminManager.action.hwidReset",
       "user.ip_limit_set": "adminManager.action.userIpLimitSet",
       "user.traffic_limit_set": "adminManager.action.userTrafficLimitSet",
+      "user.happ_hwid_set": "adminManager.action.userHappHwidSet",
+      "user.v2box_hwid_limit_set": "adminManager.action.userV2boxHwidLimitSet",
+      "user.v2box_hwid_reset": "adminManager.action.userV2boxHwidReset",
+      "user.device_limit_set": "adminManager.action.userDeviceLimitSet",
+      "user.device_reset": "adminManager.action.userDeviceReset",
+      "user.device_ban": "adminManager.action.userDeviceBan",
+      "user.device_unban": "adminManager.action.userDeviceUnban",
+      "user.set_owner": "adminManager.action.userSetOwner",
+      "user.active_next_plan": "adminManager.action.userActiveNextPlan",
+      "license.install_otp_create": "adminManager.action.installOtpCreate",
+      "license.install_otp_delete": "adminManager.action.installOtpDelete",
       "admin.traffic_limit_set": "adminManager.action.adminTrafficLimitSet",
       "admin.users_limit_set": "adminManager.action.adminUsersLimitSet",
+      "admin.unique_ip_limit_set": "adminManager.action.adminUniqueIpLimitSet",
+      "admin.device_limit_set": "adminManager.action.adminDeviceLimitSet",
       "admin.user_traffic_limit_set": "adminManager.action.adminUserTrafficLimitSet",
+      "admin.create": "adminManager.action.adminCreate",
+      "admin.delete": "adminManager.action.adminDelete",
+      "admin.password_changed": "adminManager.action.adminPasswordChanged",
+      "admin.sudo_set": "adminManager.action.adminSudoSet",
+      "admin.status_set": "adminManager.action.adminStatusSet",
     };
     const key = keyMap[action];
     if (key) return t(key);
@@ -157,6 +175,18 @@ export const AdminManager = () => {
       return t("adminManager.meta.adminUsersLimitSetUnknown");
     }
 
+    if (action === "admin.unique_ip_limit_set") {
+      const limit = meta?.new;
+      if (typeof limit === "number") return t("adminManager.meta.adminUniqueIpLimitSet", { limit });
+      return t("adminManager.meta.adminUniqueIpLimitSetUnknown");
+    }
+
+    if (action === "admin.device_limit_set") {
+      const limit = meta?.new;
+      if (typeof limit === "number") return t("adminManager.meta.adminDeviceLimitSet", { limit });
+      return t("adminManager.meta.adminDeviceLimitSetUnknown");
+    }
+
     if (action === "admin.user_traffic_limit_set") {
       const limitGb = meta?.limit_gb;
       const limitBytes = meta?.limit_bytes;
@@ -179,6 +209,36 @@ export const AdminManager = () => {
       return t("adminManager.meta.adminUserTrafficLimitSetUnknown");
     }
 
+    if (action === "admin.status_set") {
+      const from = meta?.old ? t("adminAccounts.frozen") : t("adminAccounts.active");
+      const to = meta?.new ? t("adminAccounts.frozen") : t("adminAccounts.active");
+      return t("adminManager.meta.adminStatusSet", { from, to });
+    }
+
+    if (action === "admin.sudo_set") {
+      return t("adminManager.meta.adminSudoSet", {
+        from: meta?.old ? "sudo" : t("adminAccounts.regular"),
+        to: meta?.new ? "sudo" : t("adminAccounts.regular"),
+      });
+    }
+
+    if (action === "admin.password_changed") {
+      return t("adminManager.meta.adminPasswordChanged");
+    }
+
+    if (action === "admin.create") {
+      return t("adminManager.meta.adminCreate", {
+        role: meta?.is_sudo ? "sudo" : t("adminAccounts.regular"),
+        state: meta?.is_disabled
+          ? t("adminAccounts.frozen")
+          : t("adminAccounts.active"),
+      });
+    }
+
+    if (action === "admin.delete") {
+      return t("adminManager.meta.adminDelete");
+    }
+
     if (action === "user.create") {
       const status = formatStatus(meta?.status);
       const expireTs = meta?.expire;
@@ -189,6 +249,38 @@ export const AdminManager = () => {
     }
 
     if (action === "user.modify") {
+      const changes = meta?.changes || {};
+      const parts: string[] = [];
+      if (changes?.status) {
+        parts.push(
+          t("adminManager.meta.userStatusChanged", {
+            from: formatStatus(changes.status.from),
+            to: formatStatus(changes.status.to),
+          })
+        );
+      }
+      if (changes?.expire) {
+        parts.push(
+          t("adminManager.meta.userExpireChanged", {
+            from: formatDateTime(Number(changes.expire.from || 0)),
+            to: formatDateTime(Number(changes.expire.to || 0)),
+          })
+        );
+      }
+      if (changes?.data_limit) {
+        parts.push(
+          t("adminManager.meta.userTrafficLimitSet", {
+            oldLimit: formatBytes(changes.data_limit.from),
+            newLimit: formatBytes(changes.data_limit.to),
+          })
+        );
+      }
+      if (changes?.note) {
+        parts.push(t("adminManager.meta.userNoteChanged"));
+      }
+      if (parts.length) {
+        return parts.join("; ");
+      }
       const statusFrom = meta?.changes?.status?.from;
       const statusTo = meta?.changes?.status?.to;
       if (statusFrom !== undefined || statusTo !== undefined) {
@@ -215,6 +307,53 @@ export const AdminManager = () => {
     if (action === "user.revoke_sub") return t("adminManager.meta.userRevokeSub");
     if (action === "crypto.encrypt") return t("adminManager.meta.cryptoEncrypt");
     if (action === "hwid.reset") return t("adminManager.meta.hwidReset");
+    if (action === "user.happ_hwid_set") {
+      return t("adminManager.meta.userHappHwidSet", {
+        enabled: meta?.device_id ? t("adminManager.state.enabled") : t("adminManager.state.disabled"),
+      });
+    }
+    if (action === "user.v2box_hwid_limit_set") {
+      return t("adminManager.meta.userV2boxHwidLimitSet", {
+        enabled: meta?.device_id ? t("adminManager.state.enabled") : t("adminManager.state.disabled"),
+      });
+    }
+    if (action === "user.v2box_hwid_reset") return t("adminManager.meta.userV2boxHwidReset");
+    if (action === "user.device_limit_set") {
+      return t("adminManager.meta.userDeviceLimitSet", {
+        limit: meta?.unlimited ? t("adminManager.state.unlimited") : meta?.limit ?? "-",
+      });
+    }
+    if (action === "user.device_reset") {
+      return t("adminManager.meta.userDeviceReset", { count: meta?.cleared ?? 0 });
+    }
+    if (action === "user.device_ban") {
+      return t("adminManager.meta.userDeviceBan", { fingerprint: meta?.fingerprint || "-" });
+    }
+    if (action === "user.device_unban") {
+      return t("adminManager.meta.userDeviceUnban", { fingerprint: meta?.fingerprint || "-" });
+    }
+    if (action === "user.set_owner") {
+      return t("adminManager.meta.userSetOwner", {
+        oldOwner: meta?.old_owner || "-",
+        newOwner: meta?.new_owner || "-",
+      });
+    }
+    if (action === "user.active_next_plan") {
+      const expireFrom = formatDateTime(Number(meta?.expire_from || 0));
+      const expireTo = formatDateTime(Number(meta?.expire_to || 0));
+      return t("adminManager.meta.userActiveNextPlan", {
+        expireFrom,
+        expireTo,
+      });
+    }
+    if (action === "license.install_otp_create") {
+      return t("adminManager.meta.installOtpCreate", {
+        product: meta?.product || "-",
+        edition: meta?.edition || "-",
+        expiresAt: meta?.expires_at || "-",
+      });
+    }
+    if (action === "license.install_otp_delete") return t("adminManager.meta.installOtpDelete");
 
     if (action === "user.traffic_limit_set") {
       const oldLimit = formatBytes(meta?.old);
@@ -279,6 +418,8 @@ export const AdminManager = () => {
       ts: number;
       target: string;
       admin: string;
+      created?: boolean;
+      resetUsage?: boolean;
       statusFrom?: unknown;
       statusTo?: unknown;
       ipLimit?: number;
@@ -344,6 +485,7 @@ export const AdminManager = () => {
       }
 
       if (a.action === "user.create") {
+        current.created = true;
         if (a.meta?.expire !== undefined && a.meta?.expire !== null) {
           current.expireTo = a.meta.expire;
         }
@@ -357,6 +499,7 @@ export const AdminManager = () => {
         current.statusTo = a.meta?.to;
       }
       if (a.action === "user.reset_usage") {
+        current.resetUsage = true;
         current.trafficOld = a.meta?.used_traffic_before;
         current.trafficNew = 0;
       }
@@ -364,6 +507,9 @@ export const AdminManager = () => {
 
     return grouped.map((g) => {
       const parts: string[] = [];
+      if (g.created) {
+        parts.push(t("adminManager.notifications.created"));
+      }
       if (g.statusFrom !== undefined || g.statusTo !== undefined) {
         parts.push(
           t("adminManager.notifications.statusChanged", {
@@ -373,20 +519,39 @@ export const AdminManager = () => {
         );
       }
       if (g.expireFrom !== undefined || g.expireTo !== undefined) {
+        const expireFromNum = Number(g.expireFrom || 0);
+        const expireToNum = Number(g.expireTo || 0);
+        const expireKey =
+          !g.created &&
+          Number.isFinite(expireFromNum) &&
+          Number.isFinite(expireToNum) &&
+          expireFromNum > 0 &&
+          expireToNum > expireFromNum
+            ? "adminManager.notifications.expireExtended"
+            : "adminManager.notifications.expireChanged";
         parts.push(
-          t("adminManager.notifications.expireChanged", {
+          t(expireKey, {
             from: formatDateTime(Number(g.expireFrom || 0)),
             to: formatDateTime(Number(g.expireTo || 0)),
           })
         );
       }
       if (g.trafficOld !== undefined || g.trafficNew !== undefined) {
-        parts.push(
-          t("adminManager.notifications.trafficChanged", {
-            from: formatBytes(g.trafficOld),
-            to: formatBytes(g.trafficNew),
-          })
-        );
+        if (g.resetUsage) {
+          parts.push(
+            t("adminManager.notifications.resetUsageValue", {
+              from: formatBytes(g.trafficOld),
+              to: formatBytes(g.trafficNew),
+            })
+          );
+        } else {
+          parts.push(
+            t("adminManager.notifications.trafficChanged", {
+              from: formatBytes(g.trafficOld),
+              to: formatBytes(g.trafficNew),
+            })
+          );
+        }
       }
       if (g.ipLimit !== undefined) {
         parts.push(
@@ -538,32 +703,41 @@ export const AdminManager = () => {
   };
 
   return (
-    <Box className="flew-page-shift" w="full" minW={0}>
-      <Header />
-      <Box p={{ base: 3, md: 5 }}>
-        <Stack
-          direction={{ base: "column", sm: "row" }}
-          justify="space-between"
-          align={{ base: "stretch", sm: "center" }}
-          spacing={2}
-        >
+    <VStack
+      justifyContent="space-between"
+      minH="100vh"
+      p={{ base: 4, lg: 6 }}
+      rowGap={4}
+      w="full"
+      minW={0}
+      maxW="100%"
+      overflowX="hidden"
+    >
+      <Box w="full" minW={0}>
+        <Header />
+
+        <VStack align="stretch" spacing={4}>
           <HStack>
-            <IconButton
-              aria-label={t("adminManager.back")}
-              icon={<BackIcon />}
+            <Button
               size="sm"
               variant="ghost"
+              leftIcon={<BackIcon w={4} h={4} />}
+              className="workspace-back-btn"
               onClick={() => navigate("/")}
-            />
-            <Text fontSize="2xl" fontWeight="semibold">
+            >
+              {t("adminManager.back")}
+            </Button>
+          </HStack>
+
+          <Box>
+            <Text fontSize={{ base: "xl", md: "2xl" }} fontWeight="700">
               {t("adminManager.title")}
             </Text>
-          </HStack>
-        </Stack>
+          </Box>
 
-        <Flex mt={4} gap={3} align="stretch" direction={{ base: "column", md: "row" }}>
+        <Flex gap={3} align="stretch" direction={{ base: "column", md: "row" }}>
         <Flex w={{ base: "full", md: "320px" }} gap={3} align="stretch" direction="column">
-        <Box w="full" borderWidth="1px" borderRadius="lg" p={3}>
+        <Box w="full" className="glass-card" borderRadius="lg" p={3}>
           <HStack justify="space-between" mb={2}>
             <Text fontWeight="semibold">{t("adminManager.admins")}</Text>
             <Button size="xs" variant="outline" onClick={() => loadAdmins()} isDisabled={loadingAdmins}>
@@ -599,7 +773,7 @@ export const AdminManager = () => {
             </VStack>
           )}
         </Box>
-        <Box w="full" borderWidth="1px" borderRadius="lg" p={3}>
+        <Box w="full" className="glass-card" borderRadius="lg" p={3}>
           <Text fontSize="sm" fontWeight="semibold" mb={2}>
             {t("adminManager.lifetime.title")}
           </Text>
@@ -641,7 +815,7 @@ export const AdminManager = () => {
         </Box>
         </Flex>
 
-        <Box flex="1" borderWidth="1px" borderRadius="lg" p={3} overflow="hidden">
+        <Box flex="1" className="glass-card" borderRadius="lg" p={3} overflow="hidden">
           <Stack
             direction={{ base: "column", md: "row" }}
             align={{ base: "stretch", md: "center" }}
@@ -743,7 +917,7 @@ export const AdminManager = () => {
                       <Td whiteSpace="nowrap">{actionLabel(a.action)}</Td>
                       <Td whiteSpace="nowrap">{a.target_username || "-"}</Td>
                       <Td maxW="520px" overflow="hidden" textOverflow="ellipsis">
-                        <Text title={a.meta ? safeJson(a.meta) : ""} fontSize="xs" color="gray.600">
+                        <Text title={a.meta ? safeJson(a.meta) : ""} fontSize="xs" color="var(--muted)">
                           {metaSummary(a.action, a.meta)}
                         </Text>
                       </Td>
@@ -762,6 +936,7 @@ export const AdminManager = () => {
           )}
         </Box>
       </Flex>
+        </VStack>
       </Box>
 
       <Modal isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} size="lg" isCentered>
@@ -779,22 +954,16 @@ export const AdminManager = () => {
                     borderWidth="1px"
                     borderRadius="md"
                     p={3}
-                    bg={isUnread ? "yellow.50" : "transparent"}
-                    borderColor={isUnread ? "yellow.200" : undefined}
-                    _dark={{
-                      bg: isUnread ? "rgba(245, 158, 11, 0.12)" : "rgba(148, 163, 184, 0.06)",
-                      borderColor: isUnread
-                        ? "rgba(251, 191, 36, 0.46)"
-                        : "rgba(148, 163, 184, 0.24)",
-                    }}
+                    bg={isUnread ? "rgba(245, 158, 11, 0.12)" : "rgba(148, 163, 184, 0.06)"}
+                    borderColor={isUnread ? "rgba(251, 191, 36, 0.46)" : "rgba(148, 163, 184, 0.24)"}
                   >
-                    <Text fontSize="xs" color="gray.500" _dark={{ color: "gray.400" }}>
+                    <Text fontSize="xs" color="var(--muted)">
                       {n.created_at?.replace("T", " ").slice(0, 19)}
                     </Text>
                     <Text fontSize="sm" fontWeight="semibold">
                       {n.target_username}
                     </Text>
-                    <Text fontSize="xs" color="gray.600" _dark={{ color: "gray.300" }}>
+                    <Text fontSize="xs" color="var(--muted)">
                       {t("adminManager.notifications.byAdmin", { admin: n.admin_username || "-" })}
                     </Text>
                     <Text fontSize="sm">{n.message}</Text>
@@ -845,6 +1014,6 @@ export const AdminManager = () => {
       </Modal>
 
       <Footer />
-    </Box>
+    </VStack>
   );
 };

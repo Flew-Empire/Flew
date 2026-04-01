@@ -1,30 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_DOMAIN="xpert.mediatmshow.online"
-INSTALL_DIR="${XPERT_INSTALL_DIR:-/opt/xpert}"
-SKIP_CAPTCHA="${XPERT_INSTALL_SKIP_CAPTCHA:-0}"
-FORCE_INSTALL="${XPERT_INSTALL_FORCE:-0}"
-DOMAIN="${XPERT_INSTALL_DOMAIN:-}"
-OTP_CODE="${XPERT_INSTALL_OTP:-}"
-REQUESTED_EDITION="${XPERT_INSTALL_EDITION:-}"
-PANEL_DOMAIN="${XPERT_PANEL_DOMAIN:-}"
-CERT_EMAIL="${XPERT_CERT_EMAIL:-}"
+DEFAULT_DOMAIN="merkez.mediatmshow.online"
+INSTALL_DIR="${FLEW_INSTALL_DIR:-/opt/flew}"
+SKIP_CAPTCHA="${FLEW_INSTALL_SKIP_CAPTCHA:-0}"
+FORCE_INSTALL="${FLEW_INSTALL_FORCE:-0}"
+DOMAIN="${FLEW_INSTALL_DOMAIN:-}"
+OTP_CODE="${FLEW_INSTALL_OTP:-}"
+REQUESTED_EDITION="${FLEW_INSTALL_EDITION:-}"
+PANEL_DOMAIN="${FLEW_PANEL_DOMAIN:-}"
+CERT_EMAIL="${FLEW_CERT_EMAIL:-}"
 
 usage() {
   cat <<'USAGE'
-Xpert client installer (OTP)
+Flew client installer (OTP)
 
 Usage:
   install_client.sh [--domain DOMAIN] [--otp CODE]
-                    [--edition standard|full|custom]
+                    [--edition start|pro|x]
                     [--panel-domain DOMAIN] [--cert-email EMAIL]
                     [--install-dir PATH] [--skip-captcha] [--force]
 
 Examples:
   install_client.sh
-  install_client.sh --domain xpert.mediatmshow.online --otp 123456
+  install_client.sh --domain merkez.mediatmshow.online --otp 123456
 USAGE
+}
+
+normalize_edition() {
+  case "${1,,}" in
+    standard|start) echo "start" ;;
+    full|pro) echo "pro" ;;
+    custom|x) echo "x" ;;
+    *) return 1 ;;
+  esac
 }
 
 while [ $# -gt 0 ]; do
@@ -107,13 +116,10 @@ if [ -z "$PANEL_DOMAIN" ] && [ -t 0 ]; then
 fi
 
 if [ -n "$REQUESTED_EDITION" ]; then
-  case "${REQUESTED_EDITION,,}" in
-    standard|full|custom) ;;
-    *)
-      echo "Invalid edition: $REQUESTED_EDITION (use standard|full|custom)"
-      exit 1
-      ;;
-  esac
+  if ! REQUESTED_EDITION="$(normalize_edition "$REQUESTED_EDITION")"; then
+    echo "Invalid edition: $REQUESTED_EDITION (use start|pro|x)"
+    exit 1
+  fi
 fi
 
 API_BASE="$DOMAIN"
@@ -138,7 +144,7 @@ if [ -d "$INSTALL_DIR" ] && [ "$(ls -A "$INSTALL_DIR" 2>/dev/null)" ]; then
     fi
   else
     echo "Install dir $INSTALL_DIR is not empty."
-    echo "Re-run with --force or set XPERT_INSTALL_FORCE=1 to proceed."
+    echo "Re-run with --force or set FLEW_INSTALL_FORCE=1 to proceed."
     exit 1
   fi
 fi
@@ -210,7 +216,7 @@ if command -v sed >/dev/null 2>&1; then
   # Normalize CRLF in shipped scripts
   find "$INSTALL_DIR" -type f -name "*.sh" -print0 | xargs -0 sed -i 's/\r$//'
 fi
-chmod +x xpert xpert-cli.py install_service.sh scripts/*.sh || true
+chmod +x flew flew-cli.py install_service.sh scripts/*.sh || true
 
 if [ -f requirements.txt ]; then
   install_packages() {
@@ -308,11 +314,11 @@ if [ -n "$EDITION" ]; then
       echo "${key}=\"${value}\"" >> "$ENV_FILE"
     fi
   }
-  upsert_env "XPERT_EDITION" "$EDITION"
-  if grep -q "^XPERT_FEATURES=" "$ENV_FILE"; then
-    features_val="$(grep "^XPERT_FEATURES=" "$ENV_FILE" | sed 's/^XPERT_FEATURES=//')"
+  upsert_env "FLEW_EDITION" "$EDITION"
+  if grep -q "^FLEW_FEATURES=" "$ENV_FILE"; then
+    features_val="$(grep "^FLEW_FEATURES=" "$ENV_FILE" | sed 's/^FLEW_FEATURES=//')"
     if [ -n "${features_val//\"/}" ]; then
-      echo "Note: XPERT_FEATURES is set in $ENV_FILE and overrides edition."
+      echo "Note: FLEW_FEATURES is set in $ENV_FILE and overrides edition."
     fi
   fi
 fi
@@ -364,14 +370,17 @@ if [ -n "$PANEL_DOMAIN" ]; then
 fi
 
 /bin/bash install_service.sh
-systemctl enable --now xpert || systemctl restart xpert
+systemctl enable --now flew || systemctl restart flew
 
-ln -sfn "$INSTALL_DIR/xpert" /usr/bin/xpert || true
-ln -sfn "$INSTALL_DIR/xpert-cli.py" /usr/bin/xpert-cli || true
+ln -sfn "$INSTALL_DIR/flew" /usr/bin/flew || true
+ln -sfn "$INSTALL_DIR/flew-cli.py" /usr/bin/flew-cli || true
 
 EFFECTIVE_EDITION="${EDITION:-$REQUESTED_EDITION}"
-if [ "$SKIP_CAPTCHA" -eq 0 ] && [ "${EFFECTIVE_EDITION,,}" = "custom" ]; then
-  echo "Captcha setup is optional. You can skip now and run later with: xpert captcha"
+if [ -n "$EFFECTIVE_EDITION" ] && EFFECTIVE_EDITION="$(normalize_edition "$EFFECTIVE_EDITION" 2>/dev/null || printf '%s' "$EFFECTIVE_EDITION")"; then
+  :
+fi
+if [ "$SKIP_CAPTCHA" -eq 0 ] && [ "${EFFECTIVE_EDITION,,}" = "x" ]; then
+  echo "Captcha setup is optional. You can skip now and run later with: flew captcha"
   read -r -p "Run captcha setup now? [Y/n]: " RUN_CAPTCHA
   case "${RUN_CAPTCHA,,}" in
     n|no) echo "Captcha setup skipped." ;;
@@ -381,15 +390,15 @@ if [ "$SKIP_CAPTCHA" -eq 0 ] && [ "${EFFECTIVE_EDITION,,}" = "custom" ]; then
       ;;
   esac
 elif [ "$SKIP_CAPTCHA" -eq 0 ]; then
-  echo "Captcha setup is available only in CUSTOM edition. Skipping."
+  echo "Captcha setup is available only in X edition. Skipping."
 fi
 
 echo "Install complete."
 if [ -n "$EDITION" ]; then
   echo "Edition: $EDITION"
 fi
-echo "CLI: xpert --help"
-echo "Captcha menu: xpert captcha"
+echo "CLI: flew --help"
+echo "Captcha menu: flew captcha"
 echo "SSL helper: $INSTALL_DIR/scripts/issue_cert.sh --domain your-domain.com --email you@domain"
 if [ -z "$PANEL_DOMAIN" ]; then
   echo "Fallback setup skipped. To enable: $INSTALL_DIR/scripts/setup_panel_fallback.sh --domain your-domain.com --install-dir $INSTALL_DIR"

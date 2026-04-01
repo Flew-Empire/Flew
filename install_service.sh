@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SERVICE_NAME="xpert"
-SERVICE_DESCRIPTION="Xpert Service"
-SERVICE_DOCUMENTATION="https://github.com/mybrohigh/Xpert"
+SERVICE_NAME="flew"
+SERVICE_DESCRIPTION="Flew Service"
+SERVICE_DOCUMENTATION="https://github.com/mybrohigh/Flew"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAIN_PY_PATH="$SCRIPT_DIR/main.py"

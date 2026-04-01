@@ -8,13 +8,13 @@ api/admin:1 Failed to load resource: the server responded with a status of 500 (
 ```
 
 ## 🎯 **Причина:**
-Xpert Panel требует SSL сертификаты для работы. Без них сервер работает только на localhost и не отвечает на внешние запросы.
+Flew Panel требует SSL сертификаты для работы. Без них сервер работает только на localhost и не отвечает на внешние запросы.
 
 ## ✅ **Решение 1: Запустить с SSL**
 
 ### 1. Создайте самоподписанные сертификаты:
 ```bash
-cd /opt/xpert
+cd /opt/flew
 mkdir -p ssl
 openssl req -x509 -newkey rsa:4096 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes \
   -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
@@ -22,9 +22,9 @@ openssl req -x509 -newkey rsa:4096 -keyout ssl/key.pem -out ssl/cert.pem -days 3
 
 ### 2. Запустите сервер с SSL:
 ```bash
-cd /opt/xpert
-export UVICORN_SSL_CERTFILE=/opt/xpert/ssl/cert.pem
-export UVICORN_SSL_KEYFILE=/opt/xpert/ssl/key.pem
+cd /opt/flew
+export UVICORN_SSL_CERTFILE=/opt/flew/ssl/cert.pem
+export UVICORN_SSL_KEYFILE=/opt/flew/ssl/key.pem
 python3 main.py
 ```
 
@@ -38,7 +38,7 @@ https://your-domain.com
 
 ### 1. Запустите сервер (без SSL):
 ```bash
-cd /opt/xpert
+cd /opt/flew
 python3 main.py
 ```
 
@@ -110,7 +110,7 @@ https://your-domain.com/#/traffic/
 ### Для быстрой проверки без SSL:
 ```bash
 # 1. Запустите сервер
-cd /opt/xpert
+cd /opt/flew
 python3 main.py
 
 # 2. В другом терминале проверьте API
@@ -138,9 +138,9 @@ https://your-domain.com/#/traffic/
 
 ### 🔗 **API эндпоинты:**
 ```
-GET  /api/xpert/xpert-traffic-stats
-GET  /api/xpert/traffic-stats/database/info
-POST /api/xpert/traffic-webhook
+GET  /api/flew/flew-traffic-stats
+GET  /api/flew/traffic-stats/database/info
+POST /api/flew/traffic-webhook
 ```
 
 ## ⚠️ **Важные замечания**

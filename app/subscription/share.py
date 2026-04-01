@@ -12,6 +12,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from jdatetime import date as jd
 
 from app import xray
+from app.flew.subscription_settings_service import get_subscription_settings
 from app.utils.system import get_public_ip, get_public_ipv6, readable_size
 
 from . import *
@@ -116,7 +117,7 @@ def _apply_v2box_device_id(config: str, device_id: str) -> str:
 
 
 
-def _xpert_allowed_for_user(extra_data: dict) -> bool:
+def _flew_allowed_for_user(extra_data: dict) -> bool:
     user_status = extra_data.get("status")
     if user_status not in ["active", "on_hold"]:
         return False
@@ -127,7 +128,7 @@ def _xpert_allowed_for_user(extra_data: dict) -> bool:
         return False
 
     expire = extra_data.get("expire")
-    # `expire` of 0 means unlimited in Xpert/Xpert and should stay allowed.
+    # `expire` of 0 means unlimited in Flew/Flew and should stay allowed.
     if expire is not None and expire > 0:
         now_ts = int(dt.utcnow().timestamp())
         if expire <= now_ts:
@@ -282,11 +283,11 @@ def replace_server_names_with_flags(config_raw: str) -> str:
         import config as app_config
         
         # Если флаги отключены в настройках, возвращаем как есть
-        if not app_config.XPERT_USE_COUNTRY_FLAGS:
+        if not app_config.FLEW_USE_COUNTRY_FLAGS:
             logger.info("Country flags disabled in config, returning original")
             return config_raw
             
-        from app.xpert.geo_service import geo_service
+        from app.flew.geo_service import geo_service
         import re
         import logging
         import urllib.parse
@@ -381,34 +382,34 @@ def generate_v2ray_links(proxies: dict, inbounds: dict, extra_data: dict, revers
     if expire is not None and expire > 0 and expire <= 0:
         hide_external_servers = True
     
-    # Добавляем обычные конфиги Xpert (только если не скрыты)
+    # Добавляем обычные конфиги Flew (только если не скрыты)
     if not hide_external_servers:
-        xpert_links = process_inbounds_and_tags(inbounds, proxies, format_variables, conf=conf, reverse=reverse)
+        flew_links = process_inbounds_and_tags(inbounds, proxies, format_variables, conf=conf, reverse=reverse)
     else:
         # Если пользователь неактивен, добавляем только заглушку или пусто
         pass
     
-    # Добавляем конфиги из Xpert Panel (с автоматической синхронизацией)
+    # Добавляем конфиги из Flew Panel (с автоматической синхронизацией)
     try:
-        from app.xpert.service import xpert_service
-        from app.xpert.cluster_service import whitelist_service
-        from app.xpert.ip_filter import host_filter
-        from app.xpert.xpert_integration import xpert_integration
+        from app.flew.service import flew_service
+        from app.flew.cluster_service import whitelist_service
+        from app.flew.ip_filter import host_filter
+        from app.flew.flew_integration import flew_integration
         
-        # Автоматическая синхронизация с Xpert при генерации подписки
-        # Это гарантирует что Xpert конфиги всегда доступны в Xpert
+        # Автоматическая синхронизация с Flew при генерации подписки
+        # Это гарантирует что Flew конфиги всегда доступны в Flew
         try:
             # Проверяем нужно ли синхронизировать (раз в час)
             import time
             current_time = time.time()
             
             # Получаем время последней синхронизации из кэша или файла
-            last_sync_time = getattr(xpert_service, '_last_sync_time', 0)
+            last_sync_time = getattr(flew_service, '_last_sync_time', 0)
             
             if current_time - last_sync_time > 3600:  # 1 час
-                logger.info("Auto-syncing Xpert configs to Xpert during subscription generation")
-                xpert_integration.sync_active_configs_to_xpert()
-                xpert_service._last_sync_time = current_time
+                logger.info("Auto-syncing Flew configs to Flew during subscription generation")
+                flew_integration.sync_active_configs_to_flew()
+                flew_service._last_sync_time = current_time
         except Exception as sync_error:
             logger.warning(f"Auto-sync failed: {sync_error}")
         
@@ -416,28 +417,28 @@ def generate_v2ray_links(proxies: dict, inbounds: dict, extra_data: dict, revers
         allowed_hosts = whitelist_service.get_all_allowed_hosts()
         logger.info(f"Found {len(allowed_hosts)} allowed hosts in whitelist")
         
-        # Получаем все конфиги из Xpert
-        if not app_config.XPERT_REQUIRE_ACTIVE_STATUS:
-            xpert_configs = xpert_service.get_active_configs()
+        # Получаем все конфиги из Flew
+        if not app_config.FLEW_REQUIRE_ACTIVE_STATUS:
+            flew_configs = flew_service.get_active_configs()
         else:
-            # Если пользователь неактивен, не добавляем Xpert конфиги
+            # Если пользователь неактивен, не добавляем Flew конфиги
             if user_status not in ['active', 'on_hold']:
                 return conf.render(reverse=reverse)
                 
-            # Если закончился трафик, не добавляем Xpert конфиги
+            # Если закончился трафик, не добавляем Flew конфиги
             if data_limit is not None and data_limit > 0 and used_traffic >= data_limit:
                 return conf.render(reverse=reverse)
                 
-            # Если истек срок, не добавляем Xpert конфиги
+            # Если истек срок, не добавляем Flew конфиги
             if expire is not None and expire > 0 and expire <= 0:
                 return conf.render(reverse=reverse)
             
-            xpert_configs = xpert_service.get_active_configs()
+            flew_configs = flew_service.get_active_configs()
         
         # ВСЕГДА фильтруем сервера по разрешенным хостам
-        if xpert_configs:
-            server_configs = [config.raw for config in xpert_configs]
-            logger.info(f"Processing {len(server_configs)} Xpert servers")
+        if flew_configs:
+            server_configs = [config.raw for config in flew_configs]
+            logger.info(f"Processing {len(server_configs)} Flew servers")
             
             if server_configs:
                 logger.info(f"Filtering {len(server_configs)} servers by allowed hosts")
@@ -453,8 +454,8 @@ def generate_v2ray_links(proxies: dict, inbounds: dict, extra_data: dict, revers
                     conf.add_link(config_with_flags)
                     
     except Exception as e:
-        # Если Xpert Panel не настроен, просто игнорируем
-        logger.debug(f"Xpert Panel integration failed: {e}")
+        # Если Flew Panel не настроен, просто игнорируем
+        logger.debug(f"Flew Panel integration failed: {e}")
         pass
     
     return conf.render(reverse=reverse)
@@ -470,15 +471,15 @@ def generate_clash_subscription(
 
     format_variables = setup_format_variables(extra_data)
     
-    # Добавляем обычные конфиги Xpert
-    xpert_config = process_inbounds_and_tags(
+    # Добавляем обычные конфиги Flew
+    flew_config = process_inbounds_and_tags(
         inbounds, proxies, format_variables, conf=conf, reverse=reverse
     )
     
-    # Добавляем конфиги из Xpert Panel (только для v2ray формата, clash требует специальной конвертации)
+    # Добавляем конфиги из Flew Panel (только для v2ray формата, clash требует специальной конвертации)
     # Пока пропускаем для clash, так как нужна конвертация в yaml формат
     
-    return xpert_config
+    return flew_config
 
 
 def generate_singbox_subscription(
@@ -530,6 +531,14 @@ def generate_subscription(
 
     if config_format == "v2ray":
         config = "\n".join(generate_v2ray_links(**kwargs))
+        try:
+            if get_subscription_settings().get("randomize_text_links"):
+                lines = [line for line in config.splitlines() if line.strip()]
+                if len(lines) > 1:
+                    random.shuffle(lines)
+                    config = "\n".join(lines)
+        except Exception:
+            pass
     elif config_format == "clash-meta":
         config = generate_clash_subscription(**kwargs, is_meta=True)
     elif config_format == "clash":
@@ -546,19 +555,19 @@ def generate_subscription(
     # Happ routing injection disabled to avoid forced Geo package prompts in clients.
     if config_format == "v2ray":
         try:
-            if _xpert_allowed_for_user(kwargs["extra_data"]):
-                from app.xpert.service import xpert_service
-                xpert_mix = xpert_service.generate_subscription(format="universal")
-                if xpert_mix:
-                    config = (config.rstrip("\n") + "\n" + xpert_mix.lstrip("\n")).rstrip("\n") + "\n"
+            if _flew_allowed_for_user(kwargs["extra_data"]):
+                from app.flew.service import flew_service
+                flew_mix = flew_service.generate_subscription(format="universal")
+                if flew_mix:
+                    config = (config.rstrip("\n") + "\n" + flew_mix.lstrip("\n")).rstrip("\n") + "\n"
         except Exception as e:
-            logger.error(f"Failed to append Xpert mix subscription: {e}")
+            logger.error(f"Failed to append Flew mix subscription: {e}")
 
 
         # Append per-user remote panel links from local sync cache.
         # This keeps subscription generation fast and avoids remote API calls per request.
         try:
-            from app.xpert.panel_sync_service import panel_sync_service
+            from app.flew.panel_sync_service import panel_sync_service
 
             username = str(kwargs["extra_data"].get("username") or "").strip()
             if username:

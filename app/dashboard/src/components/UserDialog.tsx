@@ -40,9 +40,8 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { resetStrategy } from "constants/UserSettings";
 import { FilterUsageType, useDashboard } from "contexts/DashboardContext";
-import dayjs from "dayjs";
-import { FC, useEffect, useState } from "react";
-import ReactApexChart from "react-apexcharts";
+import dayjs, { ManipulateType } from "dayjs";
+import React, { FC, Suspense, lazy, useEffect, useState, useRef } from "react";
 import ReactDatePicker from "react-datepicker";
 import { Controller, FormProvider, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -56,14 +55,24 @@ import {
   UserInbounds,
 } from "types/User";
 import { relativeExpiryDate } from "utils/dateFormatter";
+import { registerDatePickerLocales } from "utils/datePickerLocales";
 import { z } from "zod";
+import { useNavigate } from "react-router-dom";
 import { DeleteIcon } from "./DeleteUserModal";
 import { Icon } from "./Icon";
 import { Input } from "./Input";
 import { RadioGroup } from "./RadioGroup";
-import { UsageFilter, createUsageConfig } from "./UsageFilter";
 import { ReloadIcon } from "./Filters";
 import classNames from "classnames";
+import { createUsageConfig } from "utils/usageChart";
+
+registerDatePickerLocales();
+
+const UserUsageSection = lazy(() =>
+  import("./UserUsageSection").then((module) => ({
+    default: module.UserUsageSection,
+  }))
+);
 
 const AddUserIcon = chakra(UserPlusIcon, {
   baseStyle: {
@@ -86,7 +95,9 @@ const UserUsageIcon = chakra(ChartPieIcon, {
   },
 });
 
-export type UserDialogProps = {};
+export type UserDialogProps = {
+  mode?: "modal" | "page";
+};
 
 export type FormType = Pick<UserCreate, keyof UserCreate> & {
   selected_proxies: ProxyKeys;
@@ -107,6 +118,35 @@ type UserDeviceItem = {
   last_seen_at?: string;
 };
 
+type UserDialogCapabilityCache = {
+  ipLimitMax: number;
+  deviceLimitMax: number;
+  deviceAllowUnlimited: boolean;
+  expiresAt: number;
+};
+
+const USER_DIALOG_CAPABILITY_TTL_MS = 60_000;
+let userDialogCapabilityCache: UserDialogCapabilityCache | null = null;
+
+const getUserDialogCapabilityCache = () => {
+  if (!userDialogCapabilityCache) return null;
+  if (userDialogCapabilityCache.expiresAt < Date.now()) {
+    userDialogCapabilityCache = null;
+    return null;
+  }
+  return userDialogCapabilityCache;
+};
+
+const setUserDialogCapabilityCache = (
+  value: Omit<UserDialogCapabilityCache, "expiresAt">
+) => {
+  userDialogCapabilityCache = {
+    ...value,
+    expiresAt: Date.now() + USER_DIALOG_CAPABILITY_TTL_MS,
+  };
+  return userDialogCapabilityCache;
+};
+
 const formatUser = (user: User): FormType => {
   return {
     ...user,
@@ -117,7 +157,7 @@ const formatUser = (user: User): FormType => {
       ? Number(user.on_hold_expire_duration / (24 * 60 * 60))
       : user.on_hold_expire_duration,
     selected_proxies: Object.keys(user.proxies) as ProxyKeys,
-    unique_ip_limit: "2",
+    unique_ip_limit: "",
     device_limit: "",
     v2box_hwid: "",
     happ_hwid: "",
@@ -138,7 +178,7 @@ const getDefaultValues = (): FormType => {
     status: "active",
     on_hold_expire_duration: null,
     note: "",
-    unique_ip_limit: "2",
+    unique_ip_limit: "",
     device_limit: "",
     v2box_hwid: "",
     happ_hwid: "",
@@ -169,13 +209,45 @@ const mergeProxies = (
   return proxies;
 };
 
+const buildUsageQueryFromFilter = (filter: string): FilterUsageType => {
+  const fallback = {
+    start: dayjs().utc().subtract(30, "day").format("YYYY-MM-DDTHH:00:00"),
+  };
+
+  if (!filter || filter === "custom") {
+    return fallback;
+  }
+
+  const amount = Number(filter.slice(0, -1));
+  const unitCode = filter.slice(-1);
+  const units: Record<string, ManipulateType> = {
+    h: "hour",
+    d: "day",
+    w: "week",
+    m: "month",
+    y: "year",
+  };
+  const unit = units[unitCode];
+
+  if (!unit || !Number.isFinite(amount) || amount <= 0) {
+    return fallback;
+  }
+
+  return {
+    start: dayjs()
+      .utc()
+      .subtract(amount, unit)
+      .format("YYYY-MM-DDTHH:00:00"),
+  };
+};
+
 const baseSchema = {
   username: z.string().min(1, { message: "Required" }),
   selected_proxies: z.array(z.string()).refine((value) => value.length > 0, {
     message: "userDialog.selectOneProtocol",
   }),
   note: z.string().nullable(),
-  unique_ip_limit: z.string().default("2"),
+  unique_ip_limit: z.string().default(""),
   device_limit: z.string().default(""),
   v2box_hwid: z.string().default(""),
   happ_hwid: z.string().default(""),
@@ -243,7 +315,7 @@ const schema = z.discriminatedUnion("status", [
   }),
 ]);
 
-export const UserDialog: FC<UserDialogProps> = () => {
+export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
   const {
     editingUser,
     isCreatingNewUser,
@@ -255,8 +327,10 @@ export const UserDialog: FC<UserDialogProps> = () => {
     onDeletingUser,
     refetchUsers,
   } = useDashboard();
+  const navigate = useNavigate();
+  const isPageMode = mode === "page";
   const isEditing = !!editingUser;
-  const isOpen = isCreatingNewUser || isEditing;
+  const isOpen = isPageMode || isCreatingNewUser || isEditing;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>("");
   const toast = useToast();
@@ -418,6 +492,29 @@ export const UserDialog: FC<UserDialogProps> = () => {
   const usageTitle = t("userDialog.total");
   const [usage, setUsage] = useState(createUsageConfig(colorMode, usageTitle));
   const [usageFilter, setUsageFilter] = useState("1m");
+  const applyDialogCapabilities = ({
+    ipLimitMax: nextIpLimitMax,
+    deviceLimitMax: nextDeviceLimitMax,
+    deviceAllowUnlimited: nextDeviceAllowUnlimited,
+  }: Omit<UserDialogCapabilityCache, "expiresAt">) => {
+    if (canUseIpLimit) {
+      setIpLimitMax(nextIpLimitMax);
+    } else {
+      setIpLimitMax(3);
+    }
+
+    if (canUseDeviceLimit) {
+      setDeviceLimitMax(Math.max(1, nextDeviceLimitMax));
+      setDeviceAllowUnlimited(nextDeviceAllowUnlimited);
+      setCanEditDeviceLimit(true);
+    } else {
+      setDeviceLimitMax(1);
+      setDeviceAllowUnlimited(false);
+      setCanEditDeviceLimit(false);
+      form.setValue("device_limit", "");
+    }
+  };
+
   const fetchUsageWithFilter = (query: FilterUsageType) => {
     fetchUserUsage(editingUser!, query).then((data: any) => {
       const labels = [];
@@ -433,171 +530,170 @@ export const UserDialog: FC<UserDialogProps> = () => {
   useEffect(() => {
     if (!isOpen) return;
 
-    const ipCapRequest = canUseIpLimit ? fetch("/flew/ip-limit-cap") : Promise.resolve(null);
-    const deviceCapRequest = canUseDeviceLimit ? fetch("/flew/device-limit-cap") : Promise.resolve(null);
-    Promise.allSettled([
-      ipCapRequest,
-      deviceCapRequest,
-      fetch("/admin"),
-      fetch("/admins"),
-    ])
+    const cachedCapabilities = getUserDialogCapabilityCache();
+    if (cachedCapabilities) {
+      applyDialogCapabilities(cachedCapabilities);
+      return;
+    }
+
+    const ipCapRequest = canUseIpLimit
+      ? fetch("/flew/ip-limit-cap")
+      : Promise.resolve(null);
+    const deviceCapRequest = canUseDeviceLimit
+      ? fetch("/flew/device-limit-cap")
+      : Promise.resolve(null);
+
+    Promise.allSettled([ipCapRequest, deviceCapRequest])
       .then((results) => {
         const ipCapResp: any =
           results[0].status === "fulfilled" ? (results[0] as PromiseFulfilledResult<any>).value : null;
         const deviceCapResp: any =
           results[1].status === "fulfilled" ? (results[1] as PromiseFulfilledResult<any>).value : null;
-        const adminResp: any =
-          results[2].status === "fulfilled" ? (results[2] as PromiseFulfilledResult<any>).value : null;
-        const adminsResp: any =
-          results[3].status === "fulfilled" ? (results[3] as PromiseFulfilledResult<any>).value : null;
+        const resolvedCapabilities = setUserDialogCapabilityCache({
+          ipLimitMax: Math.max(1, Number(ipCapResp?.max_limit || 3)),
+          deviceLimitMax: Math.max(1, Number(deviceCapResp?.max_limit || 1)),
+          deviceAllowUnlimited: !!deviceCapResp?.allow_unlimited,
+        });
 
-        const ipCapFromApi = Number(ipCapResp?.max_limit || 3);
-        const adminUsername = String(adminResp?.username || "");
-        const dbAdminEntry = Array.isArray(adminsResp)
-          ? adminsResp.find((a: any) => String(a?.username || "") === adminUsername)
-          : null;
-        const isSudoAdmin = dbAdminEntry
-          ? dbAdminEntry?.is_sudo !== false
-          : adminResp?.is_sudo === true;
-
-        if (canUseIpLimit) {
-          if (dbAdminEntry && dbAdminEntry?.is_sudo === false) {
-            setIpLimitMax(3);
-          } else if (ipCapFromApi >= 5 && adminResp?.is_sudo === true) {
-            setIpLimitMax(5);
-          } else {
-            setIpLimitMax(3);
-          }
-        }
-
-        if (canUseDeviceLimit) {
-          const deviceMax = Number(deviceCapResp?.max_limit || 1);
-          const allowUnlimited = !!deviceCapResp?.allow_unlimited;
-          setDeviceLimitMax(Math.max(1, deviceMax));
-          setDeviceAllowUnlimited(allowUnlimited);
-
-          setCanEditDeviceLimit(isSudoAdmin);
-          if (!isSudoAdmin) {
-            form.setValue("device_limit", "1");
-          } else if (!isEditing && allowUnlimited) {
-            // For sudo admins: empty value means unlimited.
-            form.setValue("device_limit", "");
-          }
-        } else {
-          setDeviceLimitMax(1);
-          setDeviceAllowUnlimited(false);
-          setCanEditDeviceLimit(false);
-          form.setValue("device_limit", "1");
-        }
+        applyDialogCapabilities(resolvedCapabilities);
       })
       .catch(() => {
-        setIpLimitMax(3);
-        setDeviceLimitMax(1);
-        setDeviceAllowUnlimited(false);
-        setCanEditDeviceLimit(false);
-        form.setValue("device_limit", "1");
+        applyDialogCapabilities({
+          ipLimitMax: 3,
+          deviceLimitMax: 1,
+          deviceAllowUnlimited: false,
+        });
       });
   }, [isOpen, isEditing, canUseIpLimit, canUseDeviceLimit]);
 
   useEffect(() => {
-    if (editingUser) {
-      form.reset(formatUser(editingUser));
-
-      // Load per-user unique IP limit (2h window) for non-Happ clients.
-      if (canUseIpLimit) {
-        fetch(`/flew/ip-limit/${encodeURIComponent(editingUser.username)}`)
-          .then((resp: any) => {
-            const maxLimit = Number(resp?.max_limit || 3);
-            const disabled = !!resp?.disabled || Number(resp?.limit || 0) <= 0;
-            const limit = Number(resp?.limit ?? 2);
-            setIpLimitMax(maxLimit);
-            if (disabled) {
-              form.setValue("unique_ip_limit", "");
-            } else {
-              const safeLimit = Math.min(Math.max(1, limit), maxLimit);
-              form.setValue("unique_ip_limit", String(safeLimit));
-            }
-          })
-          .catch(() => {
-            setIpLimitMax(3);
-            form.setValue("unique_ip_limit", "2");
-          });
-      } else {
-        setIpLimitMax(3);
-        form.setValue("unique_ip_limit", "2");
-      }
-
-      if (canUseDeviceLimit) {
-        fetch(`/flew/device-limit/${encodeURIComponent(editingUser.username)}`)
-          .then((resp: any) => {
-            const maxLimit = Number(resp?.max_limit || 1);
-            const safeMax = Math.max(1, maxLimit);
-            const allowUnlimited = !!resp?.allow_unlimited;
-            const unlimited = !!resp?.unlimited;
-            const limit = Number(resp?.limit ?? 1);
-
-            setDeviceLimitMax(safeMax);
-            setDeviceAllowUnlimited(allowUnlimited);
-            if (allowUnlimited && unlimited) {
-              // Empty field in UI represents unlimited mode.
-              form.setValue("device_limit", "");
-            } else {
-              const safeLimit = Math.min(Math.max(1, limit), safeMax);
-              form.setValue("device_limit", String(safeLimit));
-            }
-          })
-          .catch(() => {
-            setDeviceLimitMax(1);
-            setDeviceAllowUnlimited(false);
-            form.setValue("device_limit", "1");
-          });
-      } else {
-        setDeviceLimitMax(1);
-        setDeviceAllowUnlimited(false);
-        form.setValue("device_limit", "1");
-      }
-
-      // Load V2Box device ID lock setting.
-      if (canUseV2box) {
-        fetch(`/flew/v2box-hwid/${encodeURIComponent(editingUser.username)}`)
-          .then((resp: any) => {
-            form.setValue("v2box_hwid", resp?.device_id || "");
-          })
-          .catch(() => {
-            form.setValue("v2box_hwid", "");
-          });
-      } else {
-        form.setValue("v2box_hwid", "");
-      }
-
-      // Load Happ HWID setting.
-      if (canUseHapp) {
-        fetch(`/flew/hwid/${encodeURIComponent(editingUser.username)}`)
-          .then((resp: any) => {
-            form.setValue("happ_hwid", resp?.device_id || "");
-          })
-          .catch(() => {
-            form.setValue("happ_hwid", "");
-          });
-      } else {
-        form.setValue("happ_hwid", "");
-      }
-
-      if (canUseDeviceLimit) {
-        refreshDevices(editingUser.username);
-      }
-
-      fetchUsageWithFilter({
-        start: dayjs().utc().subtract(30, "day").format("YYYY-MM-DDTHH:00:00"),
-      });
+    if (!editingUser) {
+      form.reset(getDefaultValues());
+      setDevices([]);
+      setUsageVisible(false);
+      return;
     }
+
+    let deviceRefreshTimer: number | null = null;
+
+    form.reset(formatUser(editingUser));
+
+    // Load per-user unique IP limit (2h window) for non-Happ clients.
+    if (canUseIpLimit) {
+      fetch(`/flew/ip-limit/${encodeURIComponent(editingUser.username)}`)
+        .then((resp: any) => {
+          const maxLimit = Number(resp?.max_limit || 3);
+          const disabled = !!resp?.disabled;
+          const hasOverride = !!resp?.has_override;
+          const limit = Number(resp?.limit ?? 0);
+          setIpLimitMax(maxLimit);
+          if (disabled || !hasOverride || !Number.isFinite(limit) || limit <= 0) {
+            form.setValue("unique_ip_limit", "");
+          } else {
+            const safeLimit = Math.min(Math.max(1, limit), maxLimit);
+            form.setValue("unique_ip_limit", String(safeLimit));
+          }
+        })
+        .catch(() => {
+          setIpLimitMax(3);
+          form.setValue("unique_ip_limit", "");
+        });
+    } else {
+      setIpLimitMax(3);
+      form.setValue("unique_ip_limit", "");
+    }
+
+    if (canUseDeviceLimit) {
+      fetch(`/flew/device-limit/${encodeURIComponent(editingUser.username)}`)
+        .then((resp: any) => {
+          const maxLimit = Number(resp?.max_limit || 1);
+          const safeMax = Math.max(1, maxLimit);
+          const allowUnlimited = !!resp?.allow_unlimited;
+          const unlimited = !!resp?.unlimited;
+          const hasOverride = !!resp?.has_override;
+          const limit = Number(resp?.limit ?? 0);
+
+          setDeviceLimitMax(safeMax);
+          setDeviceAllowUnlimited(allowUnlimited);
+          if (allowUnlimited && unlimited) {
+            form.setValue("device_limit", "");
+          } else if (!hasOverride || !Number.isFinite(limit) || limit <= 0) {
+            form.setValue("device_limit", "");
+          } else {
+            const safeLimit = Math.min(Math.max(1, limit), safeMax);
+            form.setValue("device_limit", String(safeLimit));
+          }
+        })
+        .catch(() => {
+          setDeviceLimitMax(1);
+          setDeviceAllowUnlimited(false);
+          form.setValue("device_limit", "");
+        });
+
+      // Defer the device list request so the page becomes interactive first.
+      deviceRefreshTimer = window.setTimeout(() => {
+        refreshDevices(editingUser.username);
+      }, 160);
+    } else {
+      setDeviceLimitMax(1);
+      setDeviceAllowUnlimited(false);
+      form.setValue("device_limit", "");
+      setDevices([]);
+    }
+
+    // Load V2Box device ID lock setting.
+    if (canUseV2box) {
+      fetch(`/flew/v2box-hwid/${encodeURIComponent(editingUser.username)}`)
+        .then((resp: any) => {
+          form.setValue("v2box_hwid", resp?.device_id || "");
+        })
+        .catch(() => {
+          form.setValue("v2box_hwid", "");
+        });
+    } else {
+      form.setValue("v2box_hwid", "");
+    }
+
+    // Load Happ HWID setting.
+    if (canUseHapp) {
+      fetch(`/flew/hwid/${encodeURIComponent(editingUser.username)}`)
+        .then((resp: any) => {
+          form.setValue("happ_hwid", resp?.device_id || "");
+        })
+        .catch(() => {
+          form.setValue("happ_hwid", "");
+        });
+    } else {
+      form.setValue("happ_hwid", "");
+    }
+
+    setUsage(createUsageConfig(colorMode, usageTitle));
+
+    return () => {
+      if (deviceRefreshTimer !== null) {
+        window.clearTimeout(deviceRefreshTimer);
+      }
+    };
   }, [editingUser, canUseIpLimit, canUseDeviceLimit, canUseV2box, canUseHapp]);
 
+  useEffect(() => {
+    if (!editingUser || !usageVisible) {
+      return;
+    }
+
+    fetchUsageWithFilter(buildUsageQueryFromFilter(usageFilter));
+  }, [editingUser?.username, usageVisible]);
+
+  const isSubmitting = useRef(false);
+
   const submit = (values: FormType) => {
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
     setLoading(true);
     const methods = { edited: editUser, created: createUser };
     const method = isEditing ? "edited" : "created";
     setError(null);
+    const dirtyFields = form.formState.dirtyFields;
 
     const {
       selected_proxies,
@@ -626,15 +722,14 @@ export const UserDialog: FC<UserDialogProps> = () => {
 
     methods[method](body)
       .then(async () => {
-        // Apply unique IP limit setting (default=3 clears override on backend).
-        if (canUseIpLimit) {
+        if (canUseIpLimit && dirtyFields.unique_ip_limit) {
           const limitRaw = String(
             form.getValues("unique_ip_limit") ?? unique_ip_limit ?? ""
           ).trim();
           let limitNum: number | null = null;
           if (limitRaw.length) {
             const parsed = Number(limitRaw);
-            const normalized = Number.isFinite(parsed) ? Math.trunc(parsed) : 2;
+            const normalized = Number.isFinite(parsed) ? Math.trunc(parsed) : 1;
             const maxLimit = Math.max(1, Number(ipLimitMax || 3));
             limitNum = Math.min(Math.max(1, normalized || 1), maxLimit);
           }
@@ -655,14 +750,12 @@ export const UserDialog: FC<UserDialogProps> = () => {
           }
         }
 
-        // Apply device limit setting only for sudo admins.
-        if (canUseDeviceLimit && canEditDeviceLimit) {
+        if (canUseDeviceLimit && canEditDeviceLimit && dirtyFields.device_limit) {
           try {
-            // Read current form value to avoid stale captured value during fast UI edits.
             const limitRaw = String(form.getValues("device_limit") ?? device_limit ?? "").trim();
             const unlimited = deviceAllowUnlimited && limitRaw.length === 0;
             let parsedLimit: number | null = null;
-            if (!unlimited) {
+            if (limitRaw.length && !unlimited) {
               const maxLimit = Math.max(1, Number(deviceLimitMax || 1));
               const parsed = Number(limitRaw);
               const normalized = Number.isFinite(parsed) ? Math.trunc(parsed) : 1;
@@ -678,11 +771,12 @@ export const UserDialog: FC<UserDialogProps> = () => {
             const savedAllowUnlimited = !!saved?.allow_unlimited;
             const savedUnlimited = !!saved?.unlimited;
             const savedMax = Math.max(1, Number(saved?.max_limit || deviceLimitMax || 1));
+            const savedHasOverride = !!saved?.has_override;
             const savedLimit = Math.max(1, Number(saved?.limit || parsedLimit || 1));
 
             setDeviceLimitMax(savedMax);
             setDeviceAllowUnlimited(savedAllowUnlimited);
-            if (savedAllowUnlimited && savedUnlimited) {
+            if ((savedAllowUnlimited && savedUnlimited) || !savedHasOverride) {
               form.setValue("device_limit", "");
             } else {
               form.setValue("device_limit", String(savedLimit));
@@ -768,6 +862,7 @@ export const UserDialog: FC<UserDialogProps> = () => {
         }
       })
       .finally(() => {
+        isSubmitting.current = false;
         setLoading(false);
       });
   };
@@ -784,6 +879,9 @@ export const UserDialog: FC<UserDialogProps> = () => {
     setDeviceAllowUnlimited(false);
     setUsageVisible(false);
     setUsageFilter("1m");
+    if (isPageMode) {
+      navigate("/", { replace: true });
+    }
   };
 
   const handleResetUsage = () => {
@@ -813,37 +911,56 @@ export const UserDialog: FC<UserDialogProps> = () => {
     return result;
   };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-      <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
-      <FormProvider {...form}>
-        <ModalContent mx="3">
-          <form onSubmit={form.handleSubmit(submit)}>
-            <ModalHeader pt={6}>
-              <HStack gap={2}>
-                <Icon color="primary">
-                  {isEditing ? (
-                    <EditUserIcon color="white" />
-                  ) : (
-                    <AddUserIcon color="white" />
-                  )}
-                </Icon>
-                <Text fontWeight="semibold" fontSize="lg">
-                  {isEditing
-                    ? t("userDialog.editUserTitle")
-                    : t("createNewUser")}
-                </Text>
-              </HStack>
-            </ModalHeader>
-            <ModalCloseButton mt={3} disabled={disabled} />
-            <ModalBody>
-              <Grid
-                templateColumns={{
-                  base: "repeat(1, 1fr)",
-                  md: "repeat(2, 1fr)",
-                }}
-                gap={3}
-              >
+  const FrameComponent: any = isPageMode ? Box : ModalContent;
+  const HeaderComponent: any = isPageMode ? Box : ModalHeader;
+  const BodyComponent: any = isPageMode ? Box : ModalBody;
+  const FooterComponent: any = isPageMode ? Box : ModalFooter;
+
+  const dialogContent = (
+    <FormProvider {...form}>
+      <FrameComponent
+        className={classNames("workspace-page-modal", {
+          "workspace-route-page": isPageMode,
+        })}
+        mx={isPageMode ? 0 : { base: 0, lg: 3 }}
+        my={isPageMode ? 0 : { base: 0, lg: 3 }}
+        w={isPageMode ? "100%" : { base: "100vw", lg: "calc(100vw - 24px)" }}
+        maxW={isPageMode ? "100%" : { base: "100vw", xl: "1360px" }}
+        minH={isPageMode ? undefined : { base: "100vh", lg: "calc(100vh - 24px)" }}
+        alignSelf={isPageMode ? undefined : "center"}
+      >
+        <form
+          onSubmit={form.handleSubmit(submit)}
+          className={classNames({ "workspace-route-page-form": isPageMode })}
+        >
+          <HeaderComponent
+            pt={isPageMode ? undefined : 6}
+            className={classNames({ "chakra-modal__header": isPageMode })}
+          >
+            <HStack gap={2}>
+              <Icon color="primary">
+                {isEditing ? (
+                  <EditUserIcon color="white" />
+                ) : (
+                  <AddUserIcon color="white" />
+                )}
+              </Icon>
+              <Text fontWeight="semibold" fontSize="lg">
+                {isEditing
+                  ? t("userDialog.editUserTitle")
+                  : t("createNewUser")}
+              </Text>
+            </HStack>
+          </HeaderComponent>
+          {!isPageMode && <ModalCloseButton mt={3} disabled={disabled} />}
+          <BodyComponent className={classNames({ "chakra-modal__body": isPageMode })}>
+            <Grid
+              templateColumns={{
+                base: "repeat(1, 1fr)",
+                md: "repeat(2, 1fr)",
+              }}
+              gap={3}
+            >
                 <GridItem>
                   <VStack justifyContent="space-between">
                     <Flex
@@ -853,28 +970,8 @@ export const UserDialog: FC<UserDialogProps> = () => {
                     >
                       <Flex flexDirection="row" w="full" gap={2}>
                         <FormControl mb={"10px"}>
-                          <FormLabel>
-                            <Flex gap={2} alignItems={"center"}>
-                              {t("username")}
-                              {!isEditing && (
-                                <ReloadIcon
-                                  cursor={"pointer"}
-                                  className={classNames({
-                                    "animate-spin": randomUsernameLoading,
-                                  })}
-                                  onClick={() => {
-                                    const randomUsername =
-                                      createRandomUsername();
-                                    form.setValue("username", randomUsername);
-                                    setTimeout(() => {
-                                      setrandomUsernameLoading(false);
-                                    }, 350);
-                                  }}
-                                />
-                              )}
-                            </Flex>
-                          </FormLabel>
-                          <HStack>
+                          <FormLabel>{t("username")}</FormLabel>
+                          <HStack align="stretch" spacing={2}>
                             <Input
                               size="sm"
                               type="text"
@@ -883,6 +980,39 @@ export const UserDialog: FC<UserDialogProps> = () => {
                               disabled={disabled || isEditing}
                               {...form.register("username")}
                             />
+                            <Tooltip
+                              label={
+                                isEditing
+                                  ? "Username cannot be changed for an existing user"
+                                  : t("userDialog.randomUsername")
+                              }
+                              placement="top"
+                            >
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                minW={{ base: "96px", sm: "112px" }}
+                                px={4}
+                                flexShrink={0}
+                                isDisabled={disabled || isEditing}
+                                isLoading={randomUsernameLoading}
+                                leftIcon={
+                                  randomUsernameLoading ? undefined : <ReloadIcon />
+                                }
+                                onClick={() => {
+                                  const randomUsername = createRandomUsername();
+                                  form.setValue("username", randomUsername);
+                                  setTimeout(() => {
+                                    setrandomUsernameLoading(false);
+                                  }, 350);
+                                }}
+                              >
+                                <Text display={{ base: "none", sm: "inline" }}>
+                                  {t("userDialog.randomUsername")}
+                                </Text>
+                              </Button>
+                            </Tooltip>
                             {isEditing && (
                               <HStack px={1}>
                                 <Controller
@@ -1071,6 +1201,9 @@ export const UserDialog: FC<UserDialogProps> = () => {
                               return (
                                 <>
                                   <ReactDatePicker
+                                    calendarClassName="theme-date-picker"
+                                    popperClassName="theme-date-picker-popper"
+                                    wrapperClassName="theme-date-picker-wrapper"
                                     locale={i18n.language.toLocaleLowerCase()}
                                     dateFormat={t("dateFormat")}
                                     minDate={new Date()}
@@ -1102,6 +1235,7 @@ export const UserDialog: FC<UserDialogProps> = () => {
                                     }}
                                     customInput={
                                       <Input
+                                        className="theme-date-picker-input"
                                         size="sm"
                                         type="text"
                                         borderRadius="6px"
@@ -1146,7 +1280,6 @@ export const UserDialog: FC<UserDialogProps> = () => {
                             min={1}
                             max={ipLimitMax}
                             step={1}
-                            placeholder="2"
                             {...form.register("unique_ip_limit")}
                           />
                           <FormHelperText>
@@ -1163,9 +1296,6 @@ export const UserDialog: FC<UserDialogProps> = () => {
                             min={1}
                             max={deviceLimitMax}
                             step={1}
-                            placeholder={
-                              deviceAllowUnlimited ? t("userDialog.deviceLimitUnlimited") : "1"
-                            }
                             {...form.register("device_limit")}
                           />
                           <FormHelperText>
@@ -1436,25 +1566,22 @@ export const UserDialog: FC<UserDialogProps> = () => {
                 </GridItem>
                 {isEditing && usageVisible && (
                   <GridItem pt={6} colSpan={{ base: 1, md: 2 }}>
-                    <VStack gap={4}>
-                      <UsageFilter
-                        defaultValue={usageFilter}
-                        onChange={(filter, query) => {
+                    <Suspense
+                      fallback={
+                        <HStack justifyContent="center" py={8}>
+                          <Spinner size="sm" color="primary.300" />
+                        </HStack>
+                      }
+                    >
+                      <UserUsageSection
+                        usage={usage}
+                        usageFilter={usageFilter}
+                        onFilterChange={(filter, query) => {
                           setUsageFilter(filter);
                           fetchUsageWithFilter(query);
                         }}
                       />
-                      <Box
-                        width={{ base: "100%", md: "70%" }}
-                        justifySelf="center"
-                      >
-                        <ReactApexChart
-                          options={usage.options}
-                          series={usage.series}
-                          type="donut"
-                        />
-                      </Box>
-                    </VStack>
+                    </Suspense>
                   </GridItem>
                 )}
               </Grid>
@@ -1468,8 +1595,11 @@ export const UserDialog: FC<UserDialogProps> = () => {
                   {error}
                 </Alert>
               )}
-            </ModalBody>
-            <ModalFooter mt="3">
+            </BodyComponent>
+            <FooterComponent
+              mt="3"
+              className={classNames({ "chakra-modal__footer": isPageMode })}
+            >
               <HStack
                 justifyContent="space-between"
                 w="full"
@@ -1494,7 +1624,6 @@ export const UserDialog: FC<UserDialogProps> = () => {
                           size="sm"
                           onClick={() => {
                             onDeletingUser(editingUser);
-                            onClose();
                           }}
                         >
                           <DeleteIcon />
@@ -1528,17 +1657,35 @@ export const UserDialog: FC<UserDialogProps> = () => {
                     size="sm"
                     px="8"
                     colorScheme="primary"
+                    className="dashboard-accent-btn"
                     leftIcon={loading ? <Spinner size="xs" /> : undefined}
                     disabled={disabled}
+                    w="full"
                   >
                     {isEditing ? t("userDialog.editUser") : t("createUser")}
                   </Button>
                 </HStack>
               </HStack>
-            </ModalFooter>
+            </FooterComponent>
           </form>
-        </ModalContent>
+        </FrameComponent>
       </FormProvider>
+  );
+
+  if (isPageMode) {
+    return dialogContent;
+  }
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="full"
+      scrollBehavior="inside"
+      motionPreset="slideInBottom"
+    >
+      <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
+      {dialogContent}
     </Modal>
   );
 };

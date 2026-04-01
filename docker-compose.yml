@@ -1,8 +1,8 @@
 services:
-  xpert:
-    image: xpert:latest
+  flew:
+    image: flew:latest
     restart: always
     env_file: .env
     network_mode: host
     volumes:
-      - /var/lib/xpert:/var/lib/xpert
+      - /var/lib/flew:/var/lib/flew

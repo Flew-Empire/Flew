@@ -9,6 +9,7 @@ import "locales/i18n";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "react-query";
+import { AppErrorBoundary } from "components/AppErrorBoundary";
 import { queryClient } from "utils/react-query";
 import { updateThemeColor } from "utils/themeColor";
 import { theme } from "../chakra.config";
@@ -24,13 +25,26 @@ dayjs.extend(utc);
 dayjs.extend(RelativeTime);
 dayjs.extend(Duration);
 
-updateThemeColor(localStorageManager.get() || "light");
+const initialTheme =
+  (window.localStorage.getItem("flew-theme") as "light" | "dark" | null) ||
+  (localStorageManager.get() as "light" | "dark" | null) ||
+  "dark";
+
+window.localStorage.setItem("chakra-ui-color-mode", initialTheme);
+document.body?.setAttribute("data-theme", initialTheme);
+document.documentElement?.setAttribute("translate", "no");
+document.body?.setAttribute("translate", "no");
+document.documentElement?.classList.add("notranslate");
+document.body?.classList.add("notranslate");
+updateThemeColor(initialTheme);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <ChakraProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <AppErrorBoundary>
+          <App />
+        </AppErrorBoundary>
       </QueryClientProvider>
     </ChakraProvider>
   </React.StrictMode>

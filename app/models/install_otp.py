@@ -3,10 +3,11 @@ import ipaddress
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from app.utils.edition_names import normalize_edition_name, valid_edition_names
 
-_ALLOWED_EDITIONS = {"standard", "full", "custom"}
-_ALLOWED_PRODUCTS = {"xpert", "marzban_patch"}
-_DEFAULT_PRODUCT = "xpert"
+_ALLOWED_EDITIONS = valid_edition_names()
+_ALLOWED_PRODUCTS = {"flew", "marzban_patch"}
+_DEFAULT_PRODUCT = "flew"
 
 
 class InstallOtpCreate(BaseModel):
@@ -32,7 +33,7 @@ class InstallOtpCreate(BaseModel):
     def validate_product(cls, value: str):
         normalized = (value or "").strip().lower()
         if normalized not in _ALLOWED_PRODUCTS:
-            raise ValueError("product must be xpert or marzban_patch")
+            raise ValueError("product must be flew or marzban_patch")
         return normalized
 
     @field_validator("bound_ip")
@@ -59,7 +60,7 @@ class InstallOtpCreate(BaseModel):
     def validate_edition(cls, value: Optional[str]):
         if value is None:
             return None
-        return (value or "").strip().lower()
+        return normalize_edition_name(value)
 
     @model_validator(mode="after")
     def validate_product_edition(self):
@@ -69,11 +70,12 @@ class InstallOtpCreate(BaseModel):
         self.product = product
         
         edition = (self.edition or "").strip().lower()
-        if product in ("xpert", "marzban_patch"):
+        if product in ("flew", "marzban_patch"):
             if not edition:
-                edition = "standard"
+                edition = "start"
+            edition = normalize_edition_name(edition)
             if edition not in _ALLOWED_EDITIONS:
-                raise ValueError("edition must be standard, full, or custom")
+                raise ValueError("edition must be start, pro, or x")
             self.edition = edition
         return self
 
@@ -117,7 +119,7 @@ class InstallDownloadTokenRequest(BaseModel):
             return None
         normalized = (value or "").strip().lower()
         if normalized not in _ALLOWED_PRODUCTS:
-            raise ValueError("product must be xpert or marzban_patch")
+            raise ValueError("product must be flew or marzban_patch")
         return normalized
 
     @field_validator("edition")
@@ -125,9 +127,9 @@ class InstallDownloadTokenRequest(BaseModel):
     def validate_optional_edition(cls, value: Optional[str]):
         if value is None:
             return None
-        normalized = (value or "").strip().lower()
+        normalized = normalize_edition_name(value)
         if normalized not in _ALLOWED_EDITIONS:
-            raise ValueError("edition must be standard, full, or custom")
+            raise ValueError("edition must be start, pro, or x")
         return normalized
 
 

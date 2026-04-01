@@ -17,6 +17,7 @@ export const fetcher = <T = any>(
   url: string,
   ops: FetchOptions<"json"> = {}
 ) => {
+  const silent404 = Boolean((ops as any)?.silent404);
   const token = getAuthToken();
   if (token) {
     ops["headers"] = {
@@ -30,7 +31,10 @@ export const fetcher = <T = any>(
       return res;
     })
     .catch((err) => {
-      console.error("[API ERR]", method, url, err);
+      const status = err?.response?.status ?? err?.status ?? err?.statusCode;
+      if (!(silent404 && status === 404)) {
+        console.error("[API ERR]", method, url, err);
+      }
       throw err;
     });
 };

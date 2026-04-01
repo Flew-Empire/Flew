@@ -9,8 +9,8 @@ from app.db import Session, crud, get_db
 from app.dependencies import get_validated_sub, validate_dates
 from app.models.user import SubscriptionUserResponse, UserResponse
 from app.subscription.share import encode_title, generate_subscription
-from app.xpert.hwid_lock_service import check_and_register_hwid_for_username
-from app.xpert.ip_limit_service import check_and_register_ip_for_username, get_client_ip
+from app.flew.hwid_lock_service import check_and_register_hwid_for_username
+from app.flew.ip_limit_service import check_and_register_ip_for_username, get_client_ip
 from app.templates import render_template
 from app import logger
 from config import (
@@ -135,8 +135,14 @@ def user_subscription(
         )
     }
 
+    if user.expire:
+        response_headers["sub-expire"] = "1"
+        response_headers["notification-subs-expire"] = "1"
+        if SUB_SUPPORT_URL:
+            response_headers["sub-expire-button-link"] = SUB_SUPPORT_URL
+
     if re.match(r'^Happ/', user_agent):
-        response_headers.pop("subscription-userinfo", None)
+        response_headers["profile-title"] = SUB_PROFILE_TITLE
         response_headers.pop("profile-web-page-url", None)
     if re.match(r'^([Cc]lash-verge|[Cc]lash[-\.]?[Mm]eta|[Ff][Ll][Cc]lash|[Mm]ihomo)', user_agent):
         conf = generate_subscription(user=user, config_format="clash-meta", as_base64=False, reverse=False)
@@ -278,8 +284,14 @@ def user_subscription_with_client_type(
         )
     }
 
+    if user.expire:
+        response_headers["sub-expire"] = "1"
+        response_headers["notification-subs-expire"] = "1"
+        if SUB_SUPPORT_URL:
+            response_headers["sub-expire-button-link"] = SUB_SUPPORT_URL
+
     if re.match(r'^Happ/', user_agent):
-        response_headers.pop("subscription-userinfo", None)
+        response_headers["profile-title"] = SUB_PROFILE_TITLE
         response_headers.pop("profile-web-page-url", None)
     config = client_config.get(client_type)
     conf = generate_subscription(user=user,

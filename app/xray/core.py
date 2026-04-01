@@ -1,13 +1,15 @@
 import atexit
+import os
 import re
 import subprocess
 import threading
+import time
 from collections import deque
 from contextlib import contextmanager
 
 from app import logger
 from app.xray.config import XRayConfig
-from config import DEBUG
+from config import DEBUG, XRAY_RUNTIME_JSON
 
 
 class XRayCore:
@@ -16,6 +18,7 @@ class XRayCore:
                  assets_path: str = "/usr/share/xray"):
         self.executable_path = executable_path
         self.assets_path = assets_path
+        self.runtime_config_path = XRAY_RUNTIME_JSON
 
         self.version = self.get_version()
         self.process = None
@@ -110,6 +113,8 @@ class XRayCore:
         if config.get('log', {}).get('logLevel') in ('none', 'error'):
             config['log']['logLevel'] = 'warning'
 
+        self._write_runtime_config(config)
+
         cmd = [
             self.executable_path,
             "run",
@@ -127,6 +132,18 @@ class XRayCore:
         self.process.stdin.write(config.to_json())
         self.process.stdin.flush()
         self.process.stdin.close()
+        time.sleep(0.2)
+        if self.process.poll() is not None:
+            stderr_output = ""
+            try:
+                stderr_output = self.process.stderr.read().strip()
+            except Exception:
+                stderr_output = ""
+            self.process = None
+            raise RuntimeError(
+                f"Xray core failed to start{': ' + stderr_output if stderr_output else ''}"
+            )
+
         logger.warning(f"Xray core {self.version} started")
 
         self.__capture_process_logs()
@@ -158,6 +175,23 @@ class XRayCore:
             self.start(config)
         finally:
             self.restarting = False
+
+    def _write_runtime_config(self, config: XRayConfig):
+        if not self.runtime_config_path:
+            return
+
+        try:
+            runtime_dir = os.path.dirname(self.runtime_config_path)
+            if runtime_dir:
+                os.makedirs(runtime_dir, exist_ok=True)
+            with open(self.runtime_config_path, "w") as runtime_file:
+                runtime_file.write(config.to_json(indent=4))
+        except Exception as err:
+            logger.warning(
+                "Failed to sync runtime Xray config to %s: %s",
+                self.runtime_config_path,
+                err,
+            )
 
     def on_start(self, func: callable):
         self._on_start_funcs.append(func)

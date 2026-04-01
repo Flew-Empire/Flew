@@ -12,9 +12,9 @@ if [ ! -f "$ROOT_DIR/app/dashboard/build/index.html" ]; then
 fi
 
 declare -A FEATURES
-FEATURES[standard]="admin_limits,happ_crypto,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter"
-FEATURES[full]="admin_limits,happ_crypto,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter,admin_manager,v2box_id"
-FEATURES[custom]="admin_limits,happ_crypto,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter,admin_manager,v2box_id,device_limit,captcha"
+FEATURES[start]="admin_accounts,admin_limits,happ_crypto,subscription_settings,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter"
+FEATURES[pro]="admin_accounts,admin_limits,happ_crypto,subscription_settings,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter,admin_manager,v2box_id"
+FEATURES[x]="admin_accounts,admin_limits,happ_crypto,subscription_settings,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter,admin_manager,v2box_id,device_limit,captcha"
 
 copy_sources() {
   local target="$1"
@@ -46,18 +46,18 @@ SUDO_PASSWORD=""
 XRAY_SUBSCRIPTION_URL_PREFIX=""
 VITE_BASE_API="/api/"
 
-# Xpert edition / features
-XPERT_EDITION="${edition}"
-XPERT_FEATURES="${FEATURES[$edition]}"
+# Flew edition / features
+FLEW_EDITION="${edition}"
+FLEW_FEATURES="${FEATURES[$edition]}"
 XPANEL_ENABLED=False
 ENVEOF
 }
 
-for edition in standard full custom; do
+for edition in start pro x; do
   tmp_dir="$(mktemp -d)"
   copy_sources "$tmp_dir"
   write_env "$tmp_dir" "$edition"
-  tar -C "$tmp_dir" -czf "$OUT_DIR/xpert-${edition}.tar.gz" .
+  tar -C "$tmp_dir" -czf "$OUT_DIR/flew-${edition}.tar.gz" .
   rm -rf "$tmp_dir"
-  echo "Built $OUT_DIR/xpert-${edition}.tar.gz"
+  echo "Built $OUT_DIR/flew-${edition}.tar.gz"
 done

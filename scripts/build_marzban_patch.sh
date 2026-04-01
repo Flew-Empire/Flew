@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${1:-$ROOT_DIR/releases}"
 EXPECTED_COMMIT="7f396db3e703d71a28060bc9ce4a532ec64cb1f4"
 
-EDITION_LIST=("standard" "full" "custom")
+EDITION_LIST=("start" "pro" "x")
 TMP_DIRS=()
 
 cleanup() {
@@ -19,14 +19,14 @@ mkdir -p "$OUT_DIR"
 
 edition_features() {
   case "$1" in
-    standard)
-      echo "admin_limits,happ_crypto,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter"
+    start)
+      echo "admin_accounts,admin_limits,happ_crypto,subscription_settings,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter"
       ;;
-    full)
-      echo "admin_limits,happ_crypto,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter,admin_manager,v2box_id"
+    pro)
+      echo "admin_accounts,admin_limits,happ_crypto,subscription_settings,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter,admin_manager,v2box_id"
       ;;
-    custom)
-      echo "admin_limits,happ_crypto,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter,admin_manager,v2box_id,device_limit,captcha"
+    x)
+      echo "admin_accounts,admin_limits,happ_crypto,subscription_settings,ip_limits,traffic_stats,online_stats,cpu_stats,admin_filter,admin_manager,v2box_id,device_limit,captcha"
       ;;
     *)
       echo ""
@@ -71,6 +71,7 @@ build_patch() {
   copy_file "app/__init__.py"
   copy_file "app/utils/system.py"
   copy_file "app/utils/features.py"
+  copy_file "app/utils/edition_names.py"
   copy_file "app/utils/install_tokens.py"
   copy_file "app/utils/login_security.py"
   copy_file "app/models/admin.py"
@@ -88,15 +89,16 @@ build_patch() {
   copy_file "app/routers/subscription.py"
   copy_file "app/routers/system.py"
   copy_file "app/routers/user.py"
-  copy_file "app/routers/xpert.py"
+  copy_file "app/routers/flew.py"
   copy_file "app/subscription/share.py"
   copy_file "app/subscription/v2ray.py"
   copy_file "app/telegram/handlers/admin.py"
   copy_file "app/telegram/utils/shared.py"
   copy_file "app/xray/__init__.py"
+  copy_file "app/xray/core.py"
   copy_file "app/xray/config.py"
   copy_file "app/xray/operations.py"
-  copy_dir "app/xpert"
+  copy_dir "app/flew"
 
   # CLI additions
   copy_dir "cli"
@@ -232,7 +234,7 @@ CLI
 
   # Captcha CLI default env path -> /opt/marzban/.env
   if [ -f "$OVERLAY/cli/captcha.py" ]; then
-    sed -i 's#/opt/xpert/.env#/opt/marzban/.env#g' "$OVERLAY/cli/captcha.py"
+    sed -i 's#/opt/flew/.env#/opt/marzban/.env#g' "$OVERLAY/cli/captcha.py"
   fi
 
   # Captcha setup script adjusted for marzban
@@ -293,7 +295,7 @@ upsert_env "LOGIN_CAPTCHA_SECRET" "$SECRET_KEY"
 cat <<DONE
 
 Captcha settings saved to $ENV_FILE
-Remember: the edition must include the "captcha" feature (custom edition or XPERT_FEATURES).
+Remember: the edition must include the "captcha" feature (X edition or FLEW_FEATURES).
 DONE
 
 read -r -p "Restart marzban now? [y/N]: " RESTART
@@ -353,6 +355,11 @@ if [ -f "$PATCH_META" ]; then
   done < "$PATCH_META"
 
 if [ -n "$edition" ] || [ -n "$features" ]; then
+    case "${edition,,}" in
+      standard) edition="start" ;;
+      full) edition="pro" ;;
+      custom) edition="x" ;;
+    esac
     ENV_FILE="$TARGET/.env"
     touch "$ENV_FILE"
     upsert_env() {
@@ -365,10 +372,10 @@ if [ -n "$edition" ] || [ -n "$features" ]; then
       fi
     }
     if [ -n "$edition" ]; then
-      upsert_env "XPERT_EDITION" "$edition"
+      upsert_env "FLEW_EDITION" "$edition"
     fi
     if [ -n "$features" ]; then
-      upsert_env "XPERT_FEATURES" "$features"
+      upsert_env "FLEW_FEATURES" "$features"
     fi
     # Marzban patch should not expose Xpanel
     upsert_env "XPANEL_ENABLED" "0"
@@ -639,7 +646,7 @@ for edition in "${EDITION_LIST[@]}"; do
   build_patch "$edition"
 done
 
-if [ -f "$OUT_DIR/marzban-patch-custom.tar.gz" ]; then
-  cp -f "$OUT_DIR/marzban-patch-custom.tar.gz" "$OUT_DIR/marzban-patch-latest.tar.gz"
+if [ -f "$OUT_DIR/marzban-patch-x.tar.gz" ]; then
+  cp -f "$OUT_DIR/marzban-patch-x.tar.gz" "$OUT_DIR/marzban-patch-latest.tar.gz"
   echo "Updated $OUT_DIR/marzban-patch-latest.tar.gz"
 fi

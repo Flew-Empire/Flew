@@ -1,0 +1,1 @@
+import{C as r}from"./CryptoLinkModal.4bcc5fb7.js";import{a as o,g as t}from"./index.8110000f.js";import"./chunk-MPFPK3CX.97eef5a5.js";import"./chunk-OEQDSMWZ.1e0b986d.js";import"./chunk-YI7XFFAC.c5f0840b.js";const n=()=>o(t,{minW:0,children:o(r,{mode:"page",view:"generator"})});export{n as CryptoLinkPage,n as default};

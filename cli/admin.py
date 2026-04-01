@@ -132,7 +132,7 @@ def create_admin(
     """
     Creates an admin
 
-    Password can also be set using the `XPERT_ADMIN_PASSWORD` environment variable for non-interactive usages.
+    Password can also be set using the `FLEW_ADMIN_PASSWORD` environment variable for non-interactive usages.
     """
     def _create() -> None:
         with GetDB() as db:

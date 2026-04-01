@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GATE_FILE="/etc/nginx/xpert_install_gate.conf"
+GATE_FILE="/etc/nginx/flew_install_gate.conf"
 MODE="${1:-}"
 
 case "$MODE" in

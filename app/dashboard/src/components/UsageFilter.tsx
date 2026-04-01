@@ -26,8 +26,11 @@ import dayjs, { ManipulateType } from "dayjs";
 import { FC, useRef, useState } from "react";
 import ReactDatePicker from "react-datepicker";
 import { useTranslation } from "react-i18next";
+import { registerDatePickerLocales } from "utils/datePickerLocales";
 import { generateDistinctColors } from "utils/color";
 import { formatBytes } from "utils/formatByte";
+
+registerDatePickerLocales();
 
 type DateType = Date | null;
 
@@ -184,7 +187,9 @@ export const UsageFilter: FC<UsageFilterProps> = ({
           display="flex"
           borderWidth="1px"
           borderRadius="md"
-          minW={{ base: "320px", md: "400px" }}
+          w="full"
+          minW={0}
+          flexWrap="wrap"
         >
           {filterOptions.map((value) => {
             return (
@@ -224,7 +229,8 @@ export const UsageFilter: FC<UsageFilterProps> = ({
           borderRadius="md"
           px={3}
           py={1}
-          minW={{ base: "320px", md: "400px" }}
+          w="full"
+          minW={0}
           borderWidth="1px"
         >
           <Text w="full" color={startDate ? "unset" : "gray.500"}>
@@ -248,10 +254,12 @@ export const UsageFilter: FC<UsageFilterProps> = ({
         borderWidth="1px"
         position="absolute"
         zIndex="1"
-        backgroundColor="white"
-        _dark={{
-          backgroundColor: "gray.700",
-        }}
+        left={0}
+        right={0}
+        w={{ base: "100%", md: "auto" }}
+        maxW="100%"
+        backgroundColor="var(--surface-elevated)"
+        borderColor="var(--border)"
         display={isCustomOpen ? "unset" : "none"}
       >
         <Tabs onChange={(index) => setTabIndex(index)}>
@@ -288,6 +296,8 @@ export const UsageFilter: FC<UsageFilterProps> = ({
             <TabPanel className="datepicker-panel">
               <VStack>
                 <ReactDatePicker
+                  calendarClassName="theme-date-picker theme-date-picker--inline"
+                  popperClassName="theme-date-picker-popper"
                   locale={i18n.language.toLocaleLowerCase()}
                   selected={startDate}
                   onChange={onDateChange}

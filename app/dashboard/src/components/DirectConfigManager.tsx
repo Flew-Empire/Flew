@@ -122,6 +122,25 @@ export const DirectConfigManager: FC = () => {
   const batchModal = useDisclosure();
   const editModal = useDisclosure();
 
+  const isInteractiveDragTarget = (target: EventTarget | null) =>
+    target instanceof HTMLElement &&
+    !!target.closest(
+      "button,input,textarea,label,[role='switch'],[data-no-row-drag='true']"
+    );
+
+  const scheduleLoadConfigs = () => {
+    if (typeof window === "undefined") {
+      void loadConfigs();
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        void loadConfigs();
+      });
+    });
+  };
+
   const loadConfigs = async () => {
     setLoading(true);
     try {
@@ -378,7 +397,7 @@ export const DirectConfigManager: FC = () => {
       setNewConfig({ raw: "", remarks: "", added_by: "admin" });
       setValidationResult(null);
       singleModal.onClose();
-      loadConfigs();
+      scheduleLoadConfigs();
     } catch (error: any) {
       toast({
         title: "Error adding config",
@@ -448,7 +467,7 @@ export const DirectConfigManager: FC = () => {
 
       setBatchConfigs({ configs: "", added_by: "admin" });
       batchModal.onClose();
-      loadConfigs();
+      scheduleLoadConfigs();
     } catch (error: any) {
       console.error("Batch add error:", error);
       toast({
@@ -736,7 +755,7 @@ export const DirectConfigManager: FC = () => {
       editModal.onClose();
       setEditConfig(null);
       setEditValidationResult(null);
-      loadConfigs();
+      scheduleLoadConfigs();
     } catch (error: any) {
       toast({
         title: "Error updating config",
@@ -855,7 +874,7 @@ export const DirectConfigManager: FC = () => {
   }
 
   return (
-    <Card mt="4">
+    <Card mt="4" className="notranslate" translate="no">
       <CardHeader>
         <Stack
           direction={{ base: "column", md: "row" }}
@@ -1094,6 +1113,10 @@ export const DirectConfigManager: FC = () => {
                     key={config.id}
                     draggable
                     onDragStart={(e) => {
+                      if (isInteractiveDragTarget(e.target)) {
+                        e.preventDefault();
+                        return;
+                      }
                       setDraggingId(config.id);
                       setDropTargetId(config.id);
                       e.dataTransfer.setData("text/plain", String(config.id));
@@ -1215,9 +1238,14 @@ export const DirectConfigManager: FC = () => {
       </CardBody>
 
       {/* Single Config Modal */}
-      <Modal isOpen={singleModal.isOpen} onClose={singleModal.onClose} size="lg">
+      <Modal
+        isOpen={singleModal.isOpen}
+        onClose={singleModal.onClose}
+        size="lg"
+        motionPreset="none"
+      >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent className="notranslate" translate="no">
           <ModalHeader>Add Direct Configuration</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -1299,9 +1327,14 @@ export const DirectConfigManager: FC = () => {
 
 
       {/* Edit Config Modal */}
-      <Modal isOpen={editModal.isOpen} onClose={editModal.onClose} size="lg">
+      <Modal
+        isOpen={editModal.isOpen}
+        onClose={editModal.onClose}
+        size="lg"
+        motionPreset="none"
+      >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent className="notranslate" translate="no">
           <ModalHeader>Edit Direct Configuration</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -1395,9 +1428,14 @@ export const DirectConfigManager: FC = () => {
       </Modal>
 
       {/* Batch Config Modal */}
-      <Modal isOpen={batchModal.isOpen} onClose={batchModal.onClose} size="lg">
+      <Modal
+        isOpen={batchModal.isOpen}
+        onClose={batchModal.onClose}
+        size="lg"
+        motionPreset="none"
+      >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent className="notranslate" translate="no">
           <ModalHeader>Add Batch Configurations</ModalHeader>
           <ModalCloseButton />
           <ModalBody>

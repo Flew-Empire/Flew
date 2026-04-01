@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SRC="/root/Xpert-Panel-VPS"
-DST="/opt/xpert"
+SRC="/root/Flew-Panel-VPS"
+DST="/opt/flew"
 
 if [ ! -d "$DST" ]; then
   echo "Destination not found: $DST" >&2
@@ -17,8 +17,8 @@ copy_file() {
 BACKEND_FILES=(
   "main.py"
   "config.py"
-  "xpert"
-  "xpert-cli.py"
+  "flew"
+  "flew-cli.py"
   "install_service.sh"
   "build_dashboard.sh"
   "app/__init__.py"
@@ -44,16 +44,16 @@ BACKEND_FILES=(
   "app/routers/admin.py"
   "app/routers/subscription.py"
   "app/routers/system.py"
-  "app/routers/xpert.py"
+  "app/routers/flew.py"
   "app/subscription/share.py"
-  "app/xpert/models.py"
-  "app/xpert/direct_config_service.py"
-  "app/xpert/device_limit_service.py"
-  "app/xpert/happ_crypto_auto_service.py"
-  "app/xpert/hwid_lock_service.py"
-  "app/xpert/traffic_service.py"
-  "app/xpert/panel_sync_service.py"
-  "nginx_xpert.conf"
+  "app/flew/models.py"
+  "app/flew/direct_config_service.py"
+  "app/flew/device_limit_service.py"
+  "app/flew/happ_crypto_auto_service.py"
+  "app/flew/hwid_lock_service.py"
+  "app/flew/traffic_service.py"
+  "app/flew/panel_sync_service.py"
+  "nginx_flew.conf"
   ".env.example"
   "scripts/toggle_install_gate.sh"
   "scripts/install_client.sh"
@@ -77,7 +77,7 @@ FRONTEND_FILES=(
   "app/dashboard/src/pages/Dashboard.tsx"
   "app/dashboard/src/pages/Router.tsx"
   "app/dashboard/src/pages/AdminManager.tsx"
-  "app/dashboard/src/pages/XpertPanel.tsx"
+  "app/dashboard/src/pages/FlewPanel.tsx"
   "app/dashboard/src/pages/Login.tsx"
   "app/dashboard/src/utils/userPreferenceStorage.ts"
 )
@@ -102,7 +102,7 @@ for f in "${LOCALE_FILES[@]}"; do
 done
 
 mkdir -p "$DST/releases"
-cp -f "$SRC"/releases/xpert-*.tar.gz "$DST/releases/"
+cp -f "$SRC"/releases/flew-*.tar.gz "$DST/releases/"
 cp -f "$SRC"/releases/marzban-patch-*.tar.gz "$DST/releases/" 2>/dev/null || true
 
 # Normalize line endings in build script to avoid CRLF issues
@@ -110,6 +110,6 @@ sed -i 's/\r$//' "$DST/build_dashboard.sh" || true
 
 cd "$DST"
 /bin/bash build_dashboard.sh
-systemctl restart xpert
+systemctl restart flew
 
 echo "Deploy completed."

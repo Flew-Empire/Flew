@@ -1,23 +1,32 @@
 import re
+import json
 import base64
 from distutils.version import LooseVersion
-from typing import Tuple
+from typing import Dict, Tuple
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, Response
 from fastapi.responses import HTMLResponse
 
 from app.db import Session, crud, get_db
-from app.dependencies import get_validated_sub, validate_dates
+from app.dependencies import get_validated_sub, get_validated_sub_opaque, validate_dates
 from app.models.user import SubscriptionUserResponse, UserResponse
 from app.subscription.share import encode_title, generate_subscription
-from app.xpert.hwid_lock_service import check_and_register_hwid_for_username, has_hwid_protection
-from app.xpert.ip_limit_service import check_and_register_ip_for_username, get_client_ip
-from app.xpert.v2box_hwid_service import (
+from app.flew.hwid_lock_service import check_and_register_hwid_for_username, has_hwid_protection
+from app.flew.ip_limit_service import check_and_register_ip_for_username, get_client_ip
+from app.flew.v2box_hwid_service import (
     check_and_register_v2box_for_username,
     get_required_v2box_device_id_for_username,
     has_v2box_protection,
 )
-from app.xpert.device_limit_service import check_and_register_device_for_username
+from app.flew.device_limit_service import check_and_register_device_for_username
+from app.flew.happ_crypto_service import create_happ_crypto_link
+from app.flew.subscription_settings_service import (
+    get_custom_remarks_for_user,
+    get_subscription_settings,
+    render_subscription_value,
+)
+from app.flew.subscription_page_service import build_subscription_page_payload
 from app.templates import render_template
 from app import logger
 from app.utils.features import feature_enabled
@@ -47,13 +56,151 @@ client_config = {
 router = APIRouter(tags=['Subscription'], prefix=f'/{XRAY_SUBSCRIPTION_PATH}')
 
 
-SUB_ANNOUNCE_TEXT = """Обновляйте подписку перед каждым подключением 🔄
-
-Her bir birikdirmeden öň podpiskany täzeläň 🔄"""
-
-
 def encode_announce(text: str) -> str:
     return "base64:" + base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+
+def _is_happ_user_agent(user_agent: str) -> bool:
+    return re.match(r"^Happ/", user_agent or "") is not None
+
+
+def _strip_client_type_suffix(url: str) -> str:
+    parts = urlsplit(url)
+    path = parts.path.rstrip("/")
+    for client_type in client_config.keys():
+        suffix = f"/{client_type}"
+        if path.endswith(suffix):
+            path = path[: -len(suffix)]
+            break
+    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
+
+
+def _subscription_page_url(request: Request) -> str:
+    return _strip_client_type_suffix(str(request.url))
+
+
+def _preferred_subscription_url(request: Request, client_type: str | None = None) -> str:
+    current = str(request.url)
+    if client_type and current.rstrip("/").endswith(f"/{client_type}"):
+        return current
+    base = _subscription_page_url(request).rstrip("/")
+    if client_type:
+        return f"{base}/{client_type}"
+    return base
+
+
+def _with_hide_settings(url: str) -> str:
+    parts = urlsplit(url)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query["hide-settings"] = "true"
+    return urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment)
+    )
+
+
+def _wants_subscription_page(request: Request, user_agent: str) -> bool:
+    accept_header = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept_header:
+        return True
+    if (request.headers.get("sec-fetch-dest") or "").lower() == "document":
+        return True
+    if (request.headers.get("sec-fetch-mode") or "").lower() == "navigate":
+        return True
+    if (request.headers.get("upgrade-insecure-requests") or "").strip() == "1":
+        return True
+    # Do not rely on User-Agent alone here: some desktop/mobile clients reuse
+    # browser-like UA strings, which breaks subscription import/update by
+    # returning the interactive HTML page instead of raw config data.
+    return False
+
+
+def _build_subscription_headers(
+    request: Request,
+    user: UserResponse,
+    user_agent: str,
+    settings: Dict,
+    subscription_url: str,
+) -> Dict[str, str]:
+    support_url = render_subscription_value(
+        settings.get("support_link") or SUB_SUPPORT_URL,
+        user,
+        settings,
+        subscription_url,
+    )
+    profile_title = render_subscription_value(
+        settings.get("profile_title") or SUB_PROFILE_TITLE,
+        user,
+        settings,
+        subscription_url,
+    )
+    response_headers: Dict[str, str] = {
+        "content-disposition": f'attachment; filename="{user.username}"',
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+        "pragma": "no-cache",
+        "expires": "0",
+        "support-url": support_url,
+        "profile-title": encode_title(profile_title),
+        "profile-update-interval": str(
+            settings.get("profile_update_interval") or SUB_UPDATE_INTERVAL
+        ),
+        "subscription-userinfo": "; ".join(
+            f"{key}={val}" for key, val in get_subscription_user_info(user).items()
+        ),
+    }
+
+    if user.expire:
+        response_headers["sub-expire"] = "1"
+        response_headers["notification-subs-expire"] = "1"
+        if support_url:
+            response_headers["sub-expire-button-link"] = support_url
+
+    if settings.get("is_profile_web_page_url_enabled", True):
+        response_headers["profile-web-page-url"] = _subscription_page_url(request)
+
+    remarks = get_custom_remarks_for_user(
+        user,
+        settings,
+        is_empty_hosts=not bool(user.links),
+        subscription_url=subscription_url,
+    )
+    announce_text = render_subscription_value(
+        settings.get("happ_announce") or "",
+        user,
+        settings,
+        subscription_url,
+    )
+    announce_parts = []
+    if remarks and _is_happ_user_agent(user_agent):
+        announce_parts.extend(remarks)
+    if announce_text:
+        announce_parts.append(announce_text)
+    if announce_parts:
+        response_headers["announce"] = encode_announce("\n".join(announce_parts))
+
+    if _is_happ_user_agent(user_agent):
+        response_headers["profile-title"] = profile_title
+        response_headers.pop("profile-web-page-url", None)
+        routing_value = render_subscription_value(
+            settings.get("happ_routing") or "",
+            user,
+            settings,
+            subscription_url,
+        )
+        if routing_value:
+            response_headers["routing"] = routing_value
+
+    for key, value in (settings.get("custom_response_headers") or {}).items():
+        header_name = str(key).strip()
+        if not header_name:
+            continue
+        response_headers[header_name] = render_subscription_value(
+            str(value),
+            user,
+            settings,
+            subscription_url,
+        )
+
+    return response_headers
 
 
 def get_subscription_user_info(user: UserResponse) -> dict:
@@ -118,7 +265,7 @@ def _log_happ_hwid_debug(user: UserResponse, device_id: str, source: str, reques
 def _enforce_hwid_lock(user: UserResponse, device_id: str, user_agent: str, request: Request) -> None:
     if not feature_enabled("happ_crypto"):
         return
-    mode_enabled = _flag_enabled(request.query_params.get("xpert_hwid"))
+    mode_enabled = _flag_enabled(request.query_params.get("flew_hwid"))
     protected = has_hwid_protection(user.username)
     # Nothing to enforce for regular users without HWID protection.
     if not mode_enabled and not protected:
@@ -214,25 +361,22 @@ def _enforce_unique_ip_limit(user: UserResponse, request: Request, user_agent: s
         raise HTTPException(status_code=404, detail="Not Found")
 
 
-@router.get("/{token}/")
-@router.get("/{token}", include_in_schema=False)
-def user_subscription(
+def _serve_subscription_response(
     request: Request,
-    token: str = Path(...),
-    db: Session = Depends(get_db),
-    dbuser: UserResponse = Depends(get_validated_sub),
-    user_agent: str = Header(default=""),
-    x_hwid: str = Header(default="", alias="x-hwid"),
+    db: Session,
+    dbuser: UserResponse,
+    user_agent: str,
+    x_hwid: str,
+    current_subscription_url: str,
+    client_type: str | None = None,
 ):
-    """Provides a subscription link based on the user agent (Clash, V2Ray, etc.)."""
     user: UserResponse = UserResponse.model_validate(dbuser)
 
     happ_device_id = ""
-    # HAPP_HWID_DEBUG: log derived Happ device id (x-hwid/x-device-id/x-install-id/etc).
     if re.match(r"^Happ/", user_agent):
         require_header = False
         if feature_enabled("happ_crypto"):
-            require_header = _flag_enabled(request.query_params.get("xpert_hwid")) or has_hwid_protection(user.username)
+            require_header = _flag_enabled(request.query_params.get("flew_hwid")) or has_hwid_protection(user.username)
         happ_device_id, source = _extract_happ_device_id(request, x_hwid, allow_query=not require_header)
         _log_happ_hwid_debug(user, happ_device_id, source, request)
 
@@ -241,34 +385,83 @@ def user_subscription(
     _enforce_device_limit(user, request, user_agent)
     _enforce_unique_ip_limit(user, request, user_agent)
     v2box_device_id = _get_v2box_device_id_for_response(user, user_agent)
-    v2box_device_id = _get_v2box_device_id_for_response(user, user_agent)
+    settings = get_subscription_settings()
 
-    accept_header = request.headers.get("Accept", "")
-    if "text/html" in accept_header:
+    if _wants_subscription_page(request, user_agent):
+        page_subscription_url = _subscription_page_url(request)
+        hidden_subscription_url = _with_hide_settings(page_subscription_url)
+        custom_remarks = get_custom_remarks_for_user(
+            user,
+            settings,
+            is_empty_hosts=not bool(user.links),
+            subscription_url=page_subscription_url,
+        )
+        page_payload = build_subscription_page_payload(
+            user,
+            profile_title=render_subscription_value(
+                settings.get("profile_title") or SUB_PROFILE_TITLE,
+                user,
+                settings,
+                page_subscription_url,
+            ),
+            support_link=render_subscription_value(
+                settings.get("support_link") or SUB_SUPPORT_URL,
+                user,
+                settings,
+                page_subscription_url,
+            ),
+            page_subscription_url=page_subscription_url,
+            hidden_subscription_url=hidden_subscription_url,
+            custom_remarks=custom_remarks,
+            announce_text=render_subscription_value(
+                settings.get("happ_announce") or "",
+                user,
+                settings,
+                page_subscription_url,
+            ),
+            happ_v5_link=create_happ_crypto_link(hidden_subscription_url, "v5", True),
+            happ_v4_link=create_happ_crypto_link(hidden_subscription_url, "v4", True),
+            happ_v3_link=create_happ_crypto_link(hidden_subscription_url, "v3", True),
+            hide_settings=_flag_enabled(request.query_params.get("hide-settings")),
+        )
         return HTMLResponse(
             render_template(
                 SUBSCRIPTION_PAGE_TEMPLATE,
-                {"user": user}
-            )
+                {
+                    "page_payload_b64": base64.b64encode(
+                        json.dumps(page_payload, ensure_ascii=False).encode("utf-8")
+                    ).decode("ascii"),
+                    "meta_title": page_payload["branding"]["title"],
+                    "meta_description": f'{page_payload["branding"]["title"]} subscription page for {user.username}',
+                },
+            ),
+            headers={
+                "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+                "pragma": "no-cache",
+                "expires": "0",
+            },
         )
 
     crud.update_user_sub(db, dbuser, user_agent)
-    response_headers = {
-        "content-disposition": f'attachment; filename="{user.username}"',
-        "profile-web-page-url": str(request.url),
-        "support-url": SUB_SUPPORT_URL,
-        "profile-title": encode_title(SUB_PROFILE_TITLE),
-        "profile-update-interval": SUB_UPDATE_INTERVAL,
-        "announce": encode_announce(SUB_ANNOUNCE_TEXT),
-        "subscription-userinfo": "; ".join(
-            f"{key}={val}"
-            for key, val in get_subscription_user_info(user).items()
-        )
-    }
+    response_headers = _build_subscription_headers(
+        request,
+        user,
+        user_agent,
+        settings,
+        current_subscription_url,
+    )
 
-    if re.match(r'^Happ/', user_agent):
-        response_headers.pop("subscription-userinfo", None)
-        response_headers.pop("profile-web-page-url", None)
+    if client_type is not None:
+        config = client_config.get(client_type)
+        conf = generate_subscription(
+            user=user,
+            config_format=config["config_format"],
+            as_base64=config["as_base64"],
+            reverse=config["reverse"],
+            v2box_device_id=v2box_device_id,
+        )
+        return Response(content=conf, media_type=config["media_type"], headers=response_headers)
+
     if re.match(r'^([Cc]lash-verge|[Cc]lash[-\.]?[Mm]eta|[Ff][Ll][Cc]lash|[Mm]ihomo)', user_agent):
         conf = generate_subscription(
             user=user,
@@ -380,7 +573,7 @@ def user_subscription(
             )
             return Response(content=conf, media_type="text/plain", headers=response_headers)
 
-    elif (USE_CUSTOM_JSON_DEFAULT or USE_CUSTOM_JSON_FOR_HAPP) and re.match(r'^Happ/(\d+\.\d+\.\d+)', user_agent):
+    elif (USE_CUSTOM_JSON_DEFAULT or USE_CUSTOM_JSON_FOR_HAPP or settings.get("serve_json_for_happ")) and re.match(r'^Happ/(\d+\.\d+\.\d+)', user_agent):
         version_str = re.match(r'^Happ/(\d+\.\d+\.\d+)', user_agent).group(1)
         if LooseVersion(version_str) >= LooseVersion("1.63.1"):
             conf = generate_subscription(
@@ -401,17 +594,35 @@ def user_subscription(
             )
             return Response(content=conf, media_type="text/plain", headers=response_headers)
 
+    conf = generate_subscription(
+        user=user,
+        config_format="v2ray",
+        as_base64=True,
+        reverse=False,
+        v2box_device_id=v2box_device_id,
+    )
+    return Response(content=conf, media_type="text/plain", headers=response_headers)
 
 
-    else:
-        conf = generate_subscription(
-            user=user,
-            config_format="v2ray",
-            as_base64=True,
-            reverse=False,
-            v2box_device_id=v2box_device_id,
-        )
-        return Response(content=conf, media_type="text/plain", headers=response_headers)
+@router.get("/{token}/")
+@router.get("/{token}", include_in_schema=False)
+def user_subscription(
+    request: Request,
+    token: str = Path(...),
+    db: Session = Depends(get_db),
+    dbuser: UserResponse = Depends(get_validated_sub),
+    user_agent: str = Header(default=""),
+    x_hwid: str = Header(default="", alias="x-hwid"),
+):
+    """Provides a subscription link based on the user agent (Clash, V2Ray, etc.)."""
+    return _serve_subscription_response(
+        request=request,
+        db=db,
+        dbuser=dbuser,
+        user_agent=user_agent,
+        x_hwid=x_hwid,
+        current_subscription_url=_preferred_subscription_url(request),
+    )
 
 
 @router.get("/{token}/info", response_model=SubscriptionUserResponse)
@@ -437,6 +648,68 @@ def user_get_usage(
     return {"usages": usages, "username": dbuser.username}
 
 
+@router.get("/{opaque_a}/{opaque_b}/info", response_model=SubscriptionUserResponse, include_in_schema=False)
+def user_subscription_info_opaque(
+    dbuser: UserResponse = Depends(get_validated_sub_opaque),
+):
+    return dbuser
+
+
+@router.get("/{opaque_a}/{opaque_b}/usage", include_in_schema=False)
+def user_get_usage_opaque(
+    dbuser: UserResponse = Depends(get_validated_sub_opaque),
+    start: str = "",
+    end: str = "",
+    db: Session = Depends(get_db)
+):
+    start, end = validate_dates(start, end)
+    usages = crud.get_user_usages(db, dbuser, start, end)
+    return {"usages": usages, "username": dbuser.username}
+
+
+@router.get("/{opaque_a}/{opaque_b}/{client_type}", include_in_schema=False)
+def user_subscription_with_client_type_opaque(
+    request: Request,
+    opaque_a: str = Path(...),
+    opaque_b: str = Path(...),
+    dbuser: UserResponse = Depends(get_validated_sub_opaque),
+    client_type: str = Path(..., regex="sing-box|clash-meta|clash|outline|v2ray|v2ray-json"),
+    db: Session = Depends(get_db),
+    user_agent: str = Header(default=""),
+    x_hwid: str = Header(default="", alias="x-hwid"),
+):
+    return _serve_subscription_response(
+        request=request,
+        db=db,
+        dbuser=dbuser,
+        user_agent=user_agent,
+        x_hwid=x_hwid,
+        current_subscription_url=_preferred_subscription_url(request, client_type),
+        client_type=client_type,
+    )
+
+
+@router.get("/{opaque_a}/{opaque_b}/", include_in_schema=False)
+@router.get("/{opaque_a}/{opaque_b}", include_in_schema=False)
+def user_subscription_opaque(
+    request: Request,
+    opaque_a: str = Path(...),
+    opaque_b: str = Path(...),
+    db: Session = Depends(get_db),
+    dbuser: UserResponse = Depends(get_validated_sub_opaque),
+    user_agent: str = Header(default=""),
+    x_hwid: str = Header(default="", alias="x-hwid"),
+):
+    return _serve_subscription_response(
+        request=request,
+        db=db,
+        dbuser=dbuser,
+        user_agent=user_agent,
+        x_hwid=x_hwid,
+        current_subscription_url=_preferred_subscription_url(request),
+    )
+
+
 @router.get("/{token}/{client_type}")
 def user_subscription_with_client_type(
     request: Request,
@@ -448,50 +721,12 @@ def user_subscription_with_client_type(
     x_hwid: str = Header(default="", alias="x-hwid"),
 ):
     """Provides a subscription link based on the specified client type (e.g., Clash, V2Ray)."""
-    user: UserResponse = UserResponse.model_validate(dbuser)
-
-    happ_device_id = ""
-    # HAPP_HWID_DEBUG: log derived Happ device id (x-hwid/x-device-id/x-install-id/etc).
-    if re.match(r"^Happ/", user_agent):
-        require_header = False
-        if feature_enabled("happ_crypto"):
-            require_header = _flag_enabled(request.query_params.get("xpert_hwid")) or has_hwid_protection(user.username)
-        happ_device_id, source = _extract_happ_device_id(request, x_hwid, allow_query=not require_header)
-        _log_happ_hwid_debug(user, happ_device_id, source, request)
-
-    _enforce_hwid_lock(user, happ_device_id, user_agent, request)
-    _enforce_v2box_id_policy(user, request, user_agent)
-    _enforce_device_limit(user, request, user_agent)
-    _enforce_unique_ip_limit(user, request, user_agent)
-    
-    v2box_device_id = _get_v2box_device_id_for_response(user, user_agent)
-
-    # Track subscription fetch for explicit client_type endpoints too (/sub/<token>/v2ray).
-    crud.update_user_sub(db, dbuser, user_agent)
-
-    response_headers = {
-        "content-disposition": f'attachment; filename="{user.username}"',
-        "profile-web-page-url": str(request.url),
-        "support-url": SUB_SUPPORT_URL,
-        "profile-title": encode_title(SUB_PROFILE_TITLE),
-        "profile-update-interval": SUB_UPDATE_INTERVAL,
-        "announce": encode_announce(SUB_ANNOUNCE_TEXT),
-        "subscription-userinfo": "; ".join(
-            f"{key}={val}"
-            for key, val in get_subscription_user_info(user).items()
-        )
-    }
-
-    if re.match(r'^Happ/', user_agent):
-        response_headers.pop("subscription-userinfo", None)
-        response_headers.pop("profile-web-page-url", None)
-    config = client_config.get(client_type)
-    conf = generate_subscription(
-        user=user,
-        config_format=config["config_format"],
-        as_base64=config["as_base64"],
-        reverse=config["reverse"],
-        v2box_device_id=v2box_device_id,
+    return _serve_subscription_response(
+        request=request,
+        db=db,
+        dbuser=dbuser,
+        user_agent=user_agent,
+        x_hwid=x_hwid,
+        current_subscription_url=_preferred_subscription_url(request, client_type),
+        client_type=client_type,
     )
-
-    return Response(content=conf, media_type=config["media_type"], headers=response_headers)

@@ -72,7 +72,7 @@ const NotificationCircle = chakra(Box, {
   },
 });
 
-const NOTIFICATION_KEY = "xpert-menu-notification";
+const NOTIFICATION_KEY = "flew-menu-notification";
 
 export const shouldShowDonation = (): boolean => {
   const date = localStorage.getItem(NOTIFICATION_KEY);
@@ -139,7 +139,7 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
         {isSudo() && (
           <>
             <Text fontSize="2xl" color="gray.400">|</Text>
-            <Link to="/xpert/">
+            <Link to="/flew/">
               <Text
                 as="h1"
                 fontWeight="semibold"
@@ -147,7 +147,7 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
                 cursor="pointer"
                 _hover={{ color: "primary.500" }}
               >
-                Xpert Panel
+                Flew Panel
               </Text>
             </Link>
           </>
@@ -309,7 +309,7 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
               data-color-scheme={`no-preference: ${gBtnColor}; light: ${gBtnColor}; dark: ${gBtnColor};`}
               data-size="large"
               data-show-count="true"
-              aria-label="Star Xpert Panel on GitHub"
+              aria-label="Star Flew Panel on GitHub"
             >
               Star
             </GitHubButton>

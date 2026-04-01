@@ -1,15 +1,15 @@
-# ⚡ Xpert Panel
+# ⚡ Flew Panel
 
-**Modified Xpert Panel** - VPN управление с расширенным функционалом агрегации подписок.
+**Modified Flew Panel** - VPN управление с расширенным функционалом агрегации подписок.
 
-## 🎯 Отличия от оригинального Xpert
+## 🎯 Отличия от оригинального Flew
 
 ### Добавленный функционал:
 1. **Агрегация подписок** - прием ссылок на внешние подписки
 2. **Проверка пинга** - автоматическая проверка через целевые IP (93.171.220.198, 185.69.186.175)
 3. **Автообновление** - обновление подписок каждый час
 4. **Фильтрация** - только рабочие конфиги с пингом < 300ms
-5. **Ребрендинг** - название "Xpert Panel" вместо "Xpert"
+5. **Ребрендинг** - название "Flew Panel" вместо "Flew"
 
 ## 🚀 Установка
 
@@ -17,8 +17,8 @@
 
 ```bash
 # Клонирование
-git clone https://github.com/mybrohigh/Xpert-Panel.git
-cd Xpert-Panel
+git clone https://github.com/mybrohigh/Flew-Panel.git
+cd Flew-Panel
 
 # Настройка переменных окружения
 cp .env.example .env
@@ -52,10 +52,10 @@ python main.py
 # Основные
 UVICORN_HOST=0.0.0.0
 UVICORN_PORT=8000
-XRAY_JSON=/var/lib/xpert/xray_config.json
+XRAY_JSON=/var/lib/flew/xray_config.json
 
 # База данных MySQL
-SQLALCHEMY_DATABASE_URL=mysql+pymysql://user:password@localhost/xpert
+SQLALCHEMY_DATABASE_URL=mysql+pymysql://user:password@localhost/flew
 
 # Целевые IP для проверки пинга
 TARGET_CHECK_IPS=93.171.220.198,185.69.186.175
@@ -95,13 +95,13 @@ DOMAIN=home.turkmendili.ru
 
 ## 🎨 Изменения дизайна
 
-- Название: **Xpert Panel**
+- Название: **Flew Panel**
 - Цветовая схема: сохранена оригинальная (можно изменить в `app/dashboard/src/index.scss`)
 - Логотип: можно заменить в `app/dashboard/public/`
 
 ## 📝 Лицензия
 
-Based on [Xpert](https://github.com/Gozargah/Xpert) - AGPL-3.0 License
+Based on [Flew](https://github.com/Gozargah/Flew) - AGPL-3.0 License
 
 ## 🔧 Разработка
 
@@ -116,4 +116,4 @@ uvicorn main:app --reload
 
 ---
 
-**Xpert Panel** v1.0.0 | Powered by Xpert + Custom Extensions
+**Flew Panel** v1.0.0 | Powered by Flew + Custom Extensions

@@ -13,6 +13,7 @@ base_dir = Path(__file__).parent
 build_dir = base_dir / 'build'
 statics_dir = build_dir / 'statics'
 assets_dir = build_dir / 'assets'
+inbound_generator_dir = build_dir / 'inbound-generator'
 
 
 def build():
@@ -72,12 +73,28 @@ def run_build():
     else:
         print(f"Assets dir missing, skipping mount: {assets_dir}")
 
+    if inbound_generator_dir.is_dir():
+        app.mount(
+            '/inbound-generator/',
+            StaticFiles(directory=inbound_generator_dir, html=True),
+            name="inbound-generator"
+        )
+    else:
+        print(f"Inbound generator dir missing, skipping mount: {inbound_generator_dir}")
+
     @app.api_route("/site.webmanifest", methods=["GET", "HEAD"], include_in_schema=False)
     def site_webmanifest_alias():
         manifest_path = statics_dir / "favicon" / "site.webmanifest"
         if manifest_path.is_file():
             return FileResponse(manifest_path, media_type="application/manifest+json")
         raise HTTPException(status_code=404, detail="Manifest not found")
+
+    @app.get("/logo.svg", include_in_schema=False)
+    def logo_alias():
+        logo_path = build_dir / "logo.svg"
+        if logo_path.is_file():
+            return FileResponse(logo_path, media_type="image/svg+xml")
+        raise HTTPException(status_code=404, detail="Logo not found")
 
 
 @app.on_event("startup")

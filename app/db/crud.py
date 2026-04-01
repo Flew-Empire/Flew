@@ -9,7 +9,7 @@ import string
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union
 
-from sqlalchemy import and_, delete, func, or_, inspect, text
+from sqlalchemy import and_, delete, func, or_, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 from sqlalchemy.sql.functions import coalesce
@@ -19,6 +19,11 @@ from app.db.models import (
     JWT,
     TLS,
     Admin,
+    AdminBillingEntry,
+    AdminBillingInvoice,
+    AdminBillingProfile,
+    AdminChatMessage,
+    AdminChatPermission,
     AdminActionLog,
     AdminUsageLogs,
     NextPlan,
@@ -48,6 +53,7 @@ from app.models.user import (
     UserStatus,
     UserUsageResponse,
 )
+from app.utils.edition_names import normalize_edition_name, valid_edition_names
 
 
 def create_admin_action_log(
@@ -74,6 +80,13 @@ def create_admin_action_log(
     db.add(item)
     db.commit()
     db.refresh(item)
+    try:
+        from app.flew.admin_billing_service import register_billing_from_action_log
+
+        register_billing_from_action_log(db=db, action_log=item)
+    except Exception:
+        # Billing must never break the primary admin action.
+        pass
     return item
 
 
@@ -84,10 +97,16 @@ def _generate_install_otp_code(length: int = 8) -> str:
 
 _install_otp_lock = threading.Lock()
 _install_otp_checked = False
+_admin_limit_columns_lock = threading.Lock()
+_admin_limit_columns_checked = False
+_admin_chat_tables_lock = threading.Lock()
+_admin_chat_tables_checked = False
+_admin_billing_tables_lock = threading.Lock()
+_admin_billing_tables_checked = False
 
-_ALLOWED_INSTALL_EDITIONS = {"standard", "full", "custom"}
-_ALLOWED_INSTALL_PRODUCTS = {"xpert", "marzban_patch"}
-_DEFAULT_INSTALL_PRODUCT = "xpert"
+_ALLOWED_INSTALL_EDITIONS = valid_edition_names()
+_ALLOWED_INSTALL_PRODUCTS = {"flew", "marzban_patch"}
+_DEFAULT_INSTALL_PRODUCT = "flew"
 
 
 def _ensure_install_otp_table() -> None:
@@ -110,17 +129,26 @@ def _ensure_install_otp_table() -> None:
                         )
                         conn.execute(
                             text(
-                                "UPDATE install_otps SET edition='standard' "
+                                "UPDATE install_otps SET edition='start' "
                                 "WHERE edition IS NULL OR edition=''"
                             )
                         )
+                    conn.execute(
+                        text("UPDATE install_otps SET edition='start' WHERE edition='standard'")
+                    )
+                    conn.execute(
+                        text("UPDATE install_otps SET edition='pro' WHERE edition='full'")
+                    )
+                    conn.execute(
+                        text("UPDATE install_otps SET edition='x' WHERE edition='custom'")
+                    )
                     if "product" not in columns:
                         conn.execute(
                             text("ALTER TABLE install_otps ADD COLUMN product VARCHAR(20)")
                         )
                         conn.execute(
                             text(
-                                "UPDATE install_otps SET product='xpert' "
+                                "UPDATE install_otps SET product='flew' "
                                 "WHERE product IS NULL OR product=''"
                             )
                         )
@@ -132,12 +160,91 @@ def _ensure_install_otp_table() -> None:
             _install_otp_checked = True
 
 
+def _ensure_admin_limit_columns() -> None:
+    global _admin_limit_columns_checked
+    if _admin_limit_columns_checked:
+        return
+    with _admin_limit_columns_lock:
+        if _admin_limit_columns_checked:
+            return
+        try:
+            inspector = inspect(engine)
+            if not inspector.has_table("admins"):
+                return
+
+            columns = {col.get("name") for col in inspector.get_columns("admins")}
+            with engine.begin() as conn:
+                if "unique_ip_limit" not in columns:
+                    conn.execute(
+                        text("ALTER TABLE admins ADD COLUMN unique_ip_limit INTEGER")
+                    )
+                if "device_limit" not in columns:
+                    conn.execute(
+                        text("ALTER TABLE admins ADD COLUMN device_limit INTEGER")
+                    )
+                if "is_disabled" not in columns:
+                    conn.execute(
+                        text(
+                            "ALTER TABLE admins "
+                            "ADD COLUMN is_disabled BOOLEAN DEFAULT 0"
+                        )
+                    )
+        finally:
+            _admin_limit_columns_checked = True
+
+
+def _ensure_admin_chat_tables() -> None:
+    global _admin_chat_tables_checked
+    if _admin_chat_tables_checked:
+        return
+    with _admin_chat_tables_lock:
+        if _admin_chat_tables_checked:
+            return
+        try:
+            inspector = inspect(engine)
+            if not inspector.has_table("admin_chat_permissions"):
+                AdminChatPermission.__table__.create(bind=engine, checkfirst=True)
+            if not inspector.has_table("admin_chat_messages"):
+                AdminChatMessage.__table__.create(bind=engine, checkfirst=True)
+        finally:
+            _admin_chat_tables_checked = True
+
+
+def _ensure_admin_billing_tables() -> None:
+    global _admin_billing_tables_checked
+    if _admin_billing_tables_checked:
+        return
+    with _admin_billing_tables_lock:
+        if _admin_billing_tables_checked:
+            return
+        try:
+            inspector = inspect(engine)
+            if not inspector.has_table("admin_billing_profiles"):
+                AdminBillingProfile.__table__.create(bind=engine, checkfirst=True)
+            if not inspector.has_table("admin_billing_invoices"):
+                AdminBillingInvoice.__table__.create(bind=engine, checkfirst=True)
+            if not inspector.has_table("admin_billing_entries"):
+                AdminBillingEntry.__table__.create(bind=engine, checkfirst=True)
+        finally:
+            _admin_billing_tables_checked = True
+
+
+def _normalize_admin_pair(first_username: str, second_username: str) -> Tuple[str, str]:
+    first = str(first_username or "").strip()
+    second = str(second_username or "").strip()
+    if not first or not second:
+        raise ValueError("Both admin usernames are required")
+    if first == second:
+        raise ValueError("Admin usernames must be different")
+    return tuple(sorted((first, second), key=lambda value: (value.lower(), value)))
+
+
 def create_install_otp(
     db: Session,
     admin: Admin,
     expires_in_minutes: int = 30,
     product: str = _DEFAULT_INSTALL_PRODUCT,
-    edition: str = "standard",
+    edition: str = "start",
     bound_ip: Optional[str] = None,
     note: Optional[str] = None,
 ) -> InstallOtp:
@@ -149,7 +256,7 @@ def create_install_otp(
     if normalized_product not in _ALLOWED_INSTALL_PRODUCTS:
         raise ValueError("Invalid product")
 
-    normalized_edition = (edition or "").strip().lower()
+    normalized_edition = normalize_edition_name(edition)
     if normalized_edition not in _ALLOWED_INSTALL_EDITIONS:
         raise ValueError("Invalid edition")
 
@@ -263,7 +370,7 @@ def add_default_host(db: Session, inbound: ProxyInbound):
         db (Session): Database session.
         inbound (ProxyInbound): Proxy inbound to add the default host to.
     """
-    host = ProxyHost(remark="🚀 Xpert ({USERNAME}) [{PROTOCOL} - {TRANSPORT}]", address="{SERVER_IP}", inbound=inbound)
+    host = ProxyHost(remark="🚀 Flew ({USERNAME}) [{PROTOCOL} - {TRANSPORT}]", address="{SERVER_IP}", inbound=inbound)
     db.add(host)
     db.commit()
 
@@ -1153,6 +1260,7 @@ def get_admin(db: Session, username: str) -> Admin:
     Returns:
         Admin: The admin object.
     """
+    _ensure_admin_limit_columns()
     return db.query(Admin).filter(Admin.username == username).first()
 
 
@@ -1167,14 +1275,18 @@ def create_admin(db: Session, admin: AdminCreate) -> Admin:
     Returns:
         Admin: The created admin object.
     """
+    _ensure_admin_limit_columns()
     dbadmin = Admin(
         username=admin.username,
         hashed_password=admin.hashed_password,
         is_sudo=admin.is_sudo,
+        is_disabled=bool(admin.is_disabled),
         telegram_id=admin.telegram_id if admin.telegram_id else None,
         discord_webhook=admin.discord_webhook if admin.discord_webhook else None,
         traffic_limit=admin.traffic_limit if admin.traffic_limit is not None else None,
         users_limit=admin.users_limit if admin.users_limit is not None else None,
+        unique_ip_limit=admin.unique_ip_limit if admin.unique_ip_limit is not None else None,
+        device_limit=admin.device_limit if admin.device_limit is not None else None,
         subscription_url_prefix=admin.subscription_url_prefix if admin.subscription_url_prefix else None
     )
     db.add(dbadmin)
@@ -1195,20 +1307,33 @@ def update_admin(db: Session, dbadmin: Admin, modified_admin: AdminModify) -> Ad
     Returns:
         Admin: The updated admin object.
     """
-    if modified_admin.is_sudo:
+    _ensure_admin_limit_columns()
+    fields_set = getattr(modified_admin, "model_fields_set", None) or getattr(
+        modified_admin, "__fields_set__", set()
+    )
+
+    if "is_sudo" in fields_set and modified_admin.is_sudo:
         dbadmin.is_sudo = modified_admin.is_sudo
+    elif "is_sudo" in fields_set and modified_admin.is_sudo is False:
+        dbadmin.is_sudo = False
+    if "is_disabled" in fields_set and modified_admin.is_disabled is not None:
+        dbadmin.is_disabled = bool(modified_admin.is_disabled)
     if modified_admin.password is not None and dbadmin.hashed_password != modified_admin.hashed_password:
         dbadmin.hashed_password = modified_admin.hashed_password
         dbadmin.password_reset_at = datetime.utcnow()
-    if modified_admin.telegram_id:
+    if "telegram_id" in fields_set:
         dbadmin.telegram_id = modified_admin.telegram_id
-    if modified_admin.discord_webhook:
+    if "discord_webhook" in fields_set:
         dbadmin.discord_webhook = modified_admin.discord_webhook
-    if modified_admin.traffic_limit is not None:
+    if "traffic_limit" in fields_set:
         dbadmin.traffic_limit = modified_admin.traffic_limit
-    if modified_admin.users_limit is not None:
+    if "users_limit" in fields_set:
         dbadmin.users_limit = modified_admin.users_limit
-    if modified_admin.subscription_url_prefix is not None:
+    if "unique_ip_limit" in fields_set:
+        dbadmin.unique_ip_limit = modified_admin.unique_ip_limit
+    if "device_limit" in fields_set:
+        dbadmin.device_limit = modified_admin.device_limit
+    if "subscription_url_prefix" in fields_set:
         dbadmin.subscription_url_prefix = modified_admin.subscription_url_prefix or None
 
     db.commit()
@@ -1228,8 +1353,11 @@ def partial_update_admin(db: Session, dbadmin: Admin, modified_admin: AdminParti
     Returns:
         Admin: The updated admin object.
     """
+    _ensure_admin_limit_columns()
     if modified_admin.is_sudo is not None:
         dbadmin.is_sudo = modified_admin.is_sudo
+    if modified_admin.is_disabled is not None:
+        dbadmin.is_disabled = bool(modified_admin.is_disabled)
     if modified_admin.password is not None and dbadmin.hashed_password != modified_admin.hashed_password:
         dbadmin.hashed_password = modified_admin.hashed_password
         dbadmin.password_reset_at = datetime.utcnow()
@@ -1241,6 +1369,10 @@ def partial_update_admin(db: Session, dbadmin: Admin, modified_admin: AdminParti
         dbadmin.traffic_limit = modified_admin.traffic_limit
     if modified_admin.users_limit is not None:
         dbadmin.users_limit = modified_admin.users_limit
+    if modified_admin.unique_ip_limit is not None:
+        dbadmin.unique_ip_limit = modified_admin.unique_ip_limit
+    if modified_admin.device_limit is not None:
+        dbadmin.device_limit = modified_admin.device_limit
     if modified_admin.subscription_url_prefix is not None:
         dbadmin.subscription_url_prefix = modified_admin.subscription_url_prefix or None
 
@@ -1278,7 +1410,41 @@ def remove_admin(db: Session, dbadmin: Admin) -> Admin:
         {InstallOtp.created_by_admin_id: None}, synchronize_session=False
     )
 
-    # 5. Delete the admin
+    # 5. Remove chat permissions and messages that reference this admin username
+    _ensure_admin_chat_tables()
+    db.query(AdminChatPermission).filter(
+        or_(
+            AdminChatPermission.admin_low == dbadmin.username,
+            AdminChatPermission.admin_high == dbadmin.username,
+        )
+    ).delete(synchronize_session=False)
+    db.query(AdminChatMessage).filter(
+        or_(
+            AdminChatMessage.sender_username == dbadmin.username,
+            AdminChatMessage.recipient_username == dbadmin.username,
+        )
+    ).delete(synchronize_session=False)
+
+    # 6. Remove billing data owned by this admin username
+    _ensure_admin_billing_tables()
+    invoice_ids = [
+        invoice_id
+        for (invoice_id,) in db.query(AdminBillingInvoice.id)
+        .filter(AdminBillingInvoice.admin_username == dbadmin.username)
+        .all()
+    ]
+    if invoice_ids:
+        db.query(AdminBillingEntry).filter(
+            AdminBillingEntry.invoice_id.in_(invoice_ids)
+        ).delete(synchronize_session=False)
+    db.query(AdminBillingInvoice).filter(
+        AdminBillingInvoice.admin_username == dbadmin.username
+    ).delete(synchronize_session=False)
+    db.query(AdminBillingProfile).filter(
+        AdminBillingProfile.admin_username == dbadmin.username
+    ).delete(synchronize_session=False)
+
+    # 7. Delete the admin
     db.delete(dbadmin)
     db.commit()
     return dbadmin
@@ -1309,6 +1475,7 @@ def get_admin_by_telegram_id(db: Session, telegram_id: int) -> Admin:
     Returns:
         Admin: The admin object.
     """
+    _ensure_admin_limit_columns()
     return db.query(Admin).filter(Admin.telegram_id == telegram_id).first()
 
 
@@ -1328,6 +1495,7 @@ def get_admins(db: Session,
     Returns:
         List[Admin]: A list of admin objects.
     """
+    _ensure_admin_limit_columns()
     query = db.query(Admin)
     if username:
         query = query.filter(Admin.username.ilike(f'%{username}%'))
@@ -1336,6 +1504,436 @@ def get_admins(db: Session,
     if limit:
         query = query.limit(limit)
     return query.all()
+
+
+def list_admin_chat_permissions_for_admin(db: Session, username: str) -> List[str]:
+    _ensure_admin_chat_tables()
+    admin_username = str(username or "").strip()
+    if not admin_username:
+        return []
+
+    rows = (
+        db.query(AdminChatPermission)
+        .filter(
+            or_(
+                AdminChatPermission.admin_low == admin_username,
+                AdminChatPermission.admin_high == admin_username,
+            )
+        )
+        .all()
+    )
+    peers = []
+    for row in rows:
+        peer = row.admin_high if row.admin_low == admin_username else row.admin_low
+        if peer:
+            peers.append(peer)
+    return sorted(set(peers), key=lambda value: value.lower())
+
+
+def replace_admin_chat_permissions(
+    db: Session,
+    username: str,
+    allowed_usernames: List[str],
+    created_by_username: Optional[str] = None,
+) -> List[str]:
+    _ensure_admin_chat_tables()
+    admin_username = str(username or "").strip()
+    desired = {
+        str(peer or "").strip()
+        for peer in allowed_usernames
+        if str(peer or "").strip() and str(peer or "").strip() != admin_username
+    }
+
+    existing_rows = (
+        db.query(AdminChatPermission)
+        .filter(
+            or_(
+                AdminChatPermission.admin_low == admin_username,
+                AdminChatPermission.admin_high == admin_username,
+            )
+        )
+        .all()
+    )
+    existing_by_peer = {
+        row.admin_high if row.admin_low == admin_username else row.admin_low: row
+        for row in existing_rows
+    }
+
+    for peer, row in existing_by_peer.items():
+        if peer not in desired:
+            db.delete(row)
+
+    for peer in sorted(desired, key=lambda value: value.lower()):
+        if peer in existing_by_peer:
+            continue
+        admin_low, admin_high = _normalize_admin_pair(admin_username, peer)
+        db.add(
+            AdminChatPermission(
+                admin_low=admin_low,
+                admin_high=admin_high,
+                created_by_username=created_by_username or None,
+            )
+        )
+
+    db.commit()
+    return sorted(desired, key=lambda value: value.lower())
+
+
+def delete_admin_chat_permissions_for_admin(db: Session, username: str) -> None:
+    _ensure_admin_chat_tables()
+    admin_username = str(username or "").strip()
+    if not admin_username:
+        return
+    (
+        db.query(AdminChatPermission)
+        .filter(
+            or_(
+                AdminChatPermission.admin_low == admin_username,
+                AdminChatPermission.admin_high == admin_username,
+            )
+        )
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+
+
+def create_admin_chat_message(
+    db: Session,
+    sender_username: str,
+    recipient_username: str,
+    body: str,
+) -> AdminChatMessage:
+    _ensure_admin_chat_tables()
+    admin_low, admin_high = _normalize_admin_pair(sender_username, recipient_username)
+    item = AdminChatMessage(
+        admin_low=admin_low,
+        admin_high=admin_high,
+        sender_username=str(sender_username or "").strip(),
+        recipient_username=str(recipient_username or "").strip(),
+        body=str(body or "").strip(),
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def get_admin_chat_messages(
+    db: Session,
+    first_username: str,
+    second_username: str,
+    limit: int = 200,
+) -> List[AdminChatMessage]:
+    _ensure_admin_chat_tables()
+    admin_low, admin_high = _normalize_admin_pair(first_username, second_username)
+    safe_limit = max(1, min(int(limit or 200), 500))
+    subquery = (
+        db.query(AdminChatMessage.id)
+        .filter(
+            AdminChatMessage.admin_low == admin_low,
+            AdminChatMessage.admin_high == admin_high,
+        )
+        .order_by(AdminChatMessage.created_at.desc(), AdminChatMessage.id.desc())
+        .limit(safe_limit)
+        .subquery()
+    )
+    return (
+        db.query(AdminChatMessage)
+        .filter(AdminChatMessage.id.in_(select(subquery.c.id)))
+        .order_by(AdminChatMessage.created_at.asc(), AdminChatMessage.id.asc())
+        .all()
+    )
+
+
+def mark_admin_chat_messages_read(
+    db: Session,
+    recipient_username: str,
+    sender_username: str,
+) -> int:
+    _ensure_admin_chat_tables()
+    admin_low, admin_high = _normalize_admin_pair(recipient_username, sender_username)
+    now = datetime.utcnow()
+    updated = (
+        db.query(AdminChatMessage)
+        .filter(
+            AdminChatMessage.admin_low == admin_low,
+            AdminChatMessage.admin_high == admin_high,
+            AdminChatMessage.recipient_username == str(recipient_username or "").strip(),
+            AdminChatMessage.sender_username == str(sender_username or "").strip(),
+            AdminChatMessage.read_at.is_(None),
+        )
+        .update({AdminChatMessage.read_at: now}, synchronize_session=False)
+    )
+    db.commit()
+    return int(updated or 0)
+
+
+def count_admin_chat_unread_messages(
+    db: Session,
+    recipient_username: str,
+    sender_username: Optional[str] = None,
+) -> int:
+    _ensure_admin_chat_tables()
+    query = db.query(func.count(AdminChatMessage.id)).filter(
+        AdminChatMessage.recipient_username == str(recipient_username or "").strip(),
+        AdminChatMessage.read_at.is_(None),
+    )
+    if sender_username:
+        admin_low, admin_high = _normalize_admin_pair(recipient_username, sender_username)
+        query = query.filter(
+            AdminChatMessage.admin_low == admin_low,
+            AdminChatMessage.admin_high == admin_high,
+            AdminChatMessage.sender_username == str(sender_username or "").strip(),
+        )
+    return int(query.scalar() or 0)
+
+
+def get_admin_chat_last_message(
+    db: Session,
+    first_username: str,
+    second_username: str,
+) -> Optional[AdminChatMessage]:
+    _ensure_admin_chat_tables()
+    admin_low, admin_high = _normalize_admin_pair(first_username, second_username)
+    return (
+        db.query(AdminChatMessage)
+        .filter(
+            AdminChatMessage.admin_low == admin_low,
+            AdminChatMessage.admin_high == admin_high,
+        )
+        .order_by(AdminChatMessage.created_at.desc(), AdminChatMessage.id.desc())
+        .first()
+    )
+
+
+def get_admin_billing_profile(db: Session, username: str) -> Optional[AdminBillingProfile]:
+    _ensure_admin_billing_tables()
+    admin_username = str(username or "").strip()
+    if not admin_username:
+        return None
+    return (
+        db.query(AdminBillingProfile)
+        .filter(AdminBillingProfile.admin_username == admin_username)
+        .first()
+    )
+
+
+def list_admin_billing_profiles(db: Session) -> List[AdminBillingProfile]:
+    _ensure_admin_billing_tables()
+    return (
+        db.query(AdminBillingProfile)
+        .order_by(AdminBillingProfile.admin_username.asc())
+        .all()
+    )
+
+
+def upsert_admin_billing_profile(
+    db: Session,
+    username: str,
+    unit_price_cents: Optional[int],
+    updated_by_username: Optional[str] = None,
+) -> AdminBillingProfile:
+    _ensure_admin_billing_tables()
+    admin_username = str(username or "").strip()
+    if not admin_username:
+        raise ValueError("Admin username is required")
+
+    item = get_admin_billing_profile(db, admin_username)
+    if item is None:
+        item = AdminBillingProfile(admin_username=admin_username)
+        db.add(item)
+
+    item.unit_price_cents = int(unit_price_cents) if unit_price_cents is not None else None
+    item.updated_at = datetime.utcnow()
+    item.updated_by_username = (
+        str(updated_by_username or "").strip() or None
+    )
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def get_admin_billing_open_invoice(
+    db: Session,
+    username: str,
+) -> Optional[AdminBillingInvoice]:
+    _ensure_admin_billing_tables()
+    admin_username = str(username or "").strip()
+    if not admin_username:
+        return None
+    return (
+        db.query(AdminBillingInvoice)
+        .filter(
+            AdminBillingInvoice.admin_username == admin_username,
+            AdminBillingInvoice.status == "open",
+        )
+        .order_by(AdminBillingInvoice.opened_at.desc(), AdminBillingInvoice.id.desc())
+        .first()
+    )
+
+
+def create_admin_billing_invoice(
+    db: Session,
+    username: str,
+) -> AdminBillingInvoice:
+    _ensure_admin_billing_tables()
+    admin_username = str(username or "").strip()
+    if not admin_username:
+        raise ValueError("Admin username is required")
+    item = AdminBillingInvoice(admin_username=admin_username, status="open")
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def get_or_create_open_admin_billing_invoice(
+    db: Session,
+    username: str,
+) -> AdminBillingInvoice:
+    item = get_admin_billing_open_invoice(db, username)
+    if item is not None:
+        return item
+    return create_admin_billing_invoice(db, username)
+
+
+def get_admin_billing_entry_by_action_log(
+    db: Session,
+    action_log_id: int,
+) -> Optional[AdminBillingEntry]:
+    _ensure_admin_billing_tables()
+    if not action_log_id:
+        return None
+    return (
+        db.query(AdminBillingEntry)
+        .filter(AdminBillingEntry.action_log_id == int(action_log_id))
+        .first()
+    )
+
+
+def create_admin_billing_entry(
+    db: Session,
+    invoice_id: int,
+    action_log_id: int,
+    admin_username: str,
+    event_type: str,
+    action: str,
+    target_username: Optional[str],
+    unit_price_cents: int,
+    amount_cents: int,
+    meta: Optional[dict] = None,
+) -> AdminBillingEntry:
+    _ensure_admin_billing_tables()
+    item = AdminBillingEntry(
+        invoice_id=int(invoice_id),
+        action_log_id=int(action_log_id),
+        admin_username=str(admin_username or "").strip(),
+        event_type=str(event_type or "").strip(),
+        action=str(action or "").strip(),
+        target_username=str(target_username or "").strip() or None,
+        unit_price_cents=int(unit_price_cents or 0),
+        amount_cents=int(amount_cents or 0),
+        meta=meta or None,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def list_admin_billing_invoices(
+    db: Session,
+    username: str,
+    limit: int = 50,
+) -> List[AdminBillingInvoice]:
+    _ensure_admin_billing_tables()
+    admin_username = str(username or "").strip()
+    if not admin_username:
+        return []
+    safe_limit = max(1, min(int(limit or 50), 200))
+    return (
+        db.query(AdminBillingInvoice)
+        .options(joinedload(AdminBillingInvoice.entries))
+        .filter(AdminBillingInvoice.admin_username == admin_username)
+        .order_by(AdminBillingInvoice.opened_at.desc(), AdminBillingInvoice.id.desc())
+        .limit(safe_limit)
+        .all()
+    )
+
+
+def get_admin_billing_invoice_total_cents(
+    db: Session,
+    invoice_id: int,
+) -> int:
+    _ensure_admin_billing_tables()
+    if not invoice_id:
+        return 0
+    total = (
+        db.query(func.sum(AdminBillingEntry.amount_cents))
+        .filter(AdminBillingEntry.invoice_id == int(invoice_id))
+        .scalar()
+    )
+    return int(total or 0)
+
+
+def get_admin_billing_open_total_cents(
+    db: Session,
+    username: str,
+) -> int:
+    invoice = get_admin_billing_open_invoice(db, username)
+    if invoice is None:
+        return 0
+    return get_admin_billing_invoice_total_cents(db, invoice.id)
+
+
+def mark_admin_billing_invoice_paid(
+    db: Session,
+    username: str,
+    closed_by_username: str,
+) -> Tuple[Optional[AdminBillingInvoice], AdminBillingInvoice]:
+    _ensure_admin_billing_tables()
+    invoice = get_admin_billing_open_invoice(db, username)
+    if invoice is None:
+        new_invoice = get_or_create_open_admin_billing_invoice(db, username)
+        return None, new_invoice
+
+    invoice.status = "paid"
+    invoice.closed_at = datetime.utcnow()
+    invoice.closed_by_username = str(closed_by_username or "").strip() or None
+    db.commit()
+    db.refresh(invoice)
+    new_invoice = create_admin_billing_invoice(db, username)
+    return invoice, new_invoice
+
+
+def delete_admin_billing_for_admin(db: Session, username: str) -> None:
+    _ensure_admin_billing_tables()
+    admin_username = str(username or "").strip()
+    if not admin_username:
+        return
+    invoice_ids = [
+        invoice_id
+        for (invoice_id,) in db.query(AdminBillingInvoice.id)
+        .filter(AdminBillingInvoice.admin_username == admin_username)
+        .all()
+    ]
+    if invoice_ids:
+        (
+            db.query(AdminBillingEntry)
+            .filter(AdminBillingEntry.invoice_id.in_(invoice_ids))
+            .delete(synchronize_session=False)
+        )
+    (
+        db.query(AdminBillingInvoice)
+        .filter(AdminBillingInvoice.admin_username == admin_username)
+        .delete(synchronize_session=False)
+    )
+    (
+        db.query(AdminBillingProfile)
+        .filter(AdminBillingProfile.admin_username == admin_username)
+        .delete(synchronize_session=False)
+    )
+    db.commit()
 
 
 def get_admin_action_logs(

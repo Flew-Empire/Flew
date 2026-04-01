@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_DOMAIN="xpert.mediatmshow.online"
+DEFAULT_DOMAIN="merkez.mediatmshow.online"
 TARGET_DIR="${MARZBAN_TARGET_DIR:-/opt/marzban}"
-FORCE_INSTALL="${XPERT_INSTALL_FORCE:-0}"
-DOMAIN="${XPERT_INSTALL_DOMAIN:-}"
-OTP_CODE="${XPERT_INSTALL_OTP:-}"
-REQUESTED_EDITION="${XPERT_INSTALL_EDITION:-}"
+FORCE_INSTALL="${FLEW_INSTALL_FORCE:-0}"
+DOMAIN="${FLEW_INSTALL_DOMAIN:-}"
+OTP_CODE="${FLEW_INSTALL_OTP:-}"
+REQUESTED_EDITION="${FLEW_INSTALL_EDITION:-}"
 
 usage() {
   cat <<'USAGE'
@@ -14,13 +14,22 @@ Marzban patch installer (OTP)
 
 Usage:
   install_marzban_patch.sh [--domain DOMAIN] [--otp CODE]
-                           [--edition standard|full|custom]
+                           [--edition start|pro|x]
                            [--target PATH] [--force]
 
 Examples:
-  install_marzban_patch.sh --domain xpert.mediatmshow.online --otp 123456
+  install_marzban_patch.sh --domain merkez.mediatmshow.online --otp 123456
   install_marzban_patch.sh --otp 123456 --target /opt/marzban
 USAGE
+}
+
+normalize_edition() {
+  case "${1,,}" in
+    standard|start) echo "start" ;;
+    full|pro) echo "pro" ;;
+    custom|x) echo "x" ;;
+    *) return 1 ;;
+  esac
 }
 
 while [ $# -gt 0 ]; do
@@ -82,13 +91,10 @@ if [ -z "$OTP_CODE" ]; then
 fi
 
 if [ -n "$REQUESTED_EDITION" ]; then
-  case "${REQUESTED_EDITION,,}" in
-    standard|full|custom) ;;
-    *)
-      echo "Invalid edition: $REQUESTED_EDITION (use standard|full|custom)"
-      exit 1
-      ;;
-  esac
+  if ! REQUESTED_EDITION="$(normalize_edition "$REQUESTED_EDITION")"; then
+    echo "Invalid edition: $REQUESTED_EDITION (use start|pro|x)"
+    exit 1
+  fi
 fi
 
 API_BASE="$DOMAIN"

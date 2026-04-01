@@ -11,14 +11,15 @@ from app.models.admin import Admin, AdminCreate, AdminModify, Token
 from app.models.install_otp import InstallOtpCreate, InstallOtpResponse
 from app.utils import report, responses
 from app.utils.jwt import create_admin_token
-from app.xpert.panel_sync_service import panel_sync_service
-from config import LOGIN_NOTIFY_WHITE_LIST
+from app.flew.panel_sync_service import panel_sync_service
+from config import LOGIN_NOTIFY_WHITE_LIST, SUDOERS
 from app.utils.login_security import (
     captcha_configured,
     get_captcha_public_config,
     login_attempts,
     verify_captcha,
 )
+from config import INSTALL_OTP_ALLOWED_ADMINS
 
 router = APIRouter(tags=["Admin"], prefix="/api", responses={401: responses._401})
 
@@ -50,6 +51,18 @@ def _raise_login_error(detail: str, username: str, client_ip: str) -> None:
         detail=payload,
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+def _ensure_install_otp_access(admin: Admin) -> None:
+    allowed = {item.strip().lower() for item in INSTALL_OTP_ALLOWED_ADMINS if item}
+    if not allowed:
+        allowed = {"moor"}
+
+    if (admin.username or "").strip().lower() not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You're not allowed",
+        )
 
 
 @router.post("/admin/token", response_model=Token)
@@ -95,6 +108,7 @@ def list_install_otps(
     admin: Admin = Depends(Admin.check_sudo_admin),
 ):
     """List recent installation OTPs."""
+    _ensure_install_otp_access(admin)
     return crud.list_install_otps(db, limit=limit or 25)
 
 
@@ -109,6 +123,7 @@ def create_install_otp(
     admin: Admin = Depends(Admin.check_sudo_admin),
 ):
     """Generate a one-time OTP for installations."""
+    _ensure_install_otp_access(admin)
     item = crud.create_install_otp(
         db=db,
         admin=admin,
@@ -149,6 +164,7 @@ def delete_install_otp(
     admin: Admin = Depends(Admin.check_sudo_admin),
 ):
     """Delete an installation OTP by id."""
+    _ensure_install_otp_access(admin)
     item = crud.delete_install_otp(db, otp_id)
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OTP not found")
@@ -183,6 +199,22 @@ def create_admin(
         db.rollback()
         raise HTTPException(status_code=409, detail="Admin already exists")
 
+    try:
+        actor = crud.get_admin(db, admin.username) or admin
+        crud.create_admin_action_log(
+            db=db,
+            admin=actor,
+            action="admin.create",
+            target_type="admin",
+            target_username=dbadmin.username,
+            meta={
+                "is_sudo": bool(dbadmin.is_sudo),
+                "is_disabled": bool(getattr(dbadmin, "is_disabled", False)),
+            },
+        )
+    except Exception as e:
+        logger.debug(f"Failed to create audit log for admin create: {e}")
+
     return dbadmin
 
 
@@ -198,21 +230,37 @@ def modify_admin(
     current_admin: Admin = Depends(Admin.check_sudo_admin),
 ):
     """Modify an existing admin's details."""
-    if (dbadmin.username != current_admin.username) and dbadmin.is_sudo:
+    if dbadmin.username in SUDOERS:
         raise HTTPException(
             status_code=403,
-            detail="You're not allowed to edit another sudoer's account. Use xpert-cli instead.",
+            detail="Built-in sudo accounts can only be managed from configuration.",
         )
 
     old_traffic_limit = dbadmin.traffic_limit
     old_users_limit = dbadmin.users_limit
+    old_unique_ip_limit = getattr(dbadmin, "unique_ip_limit", None)
+    old_device_limit = getattr(dbadmin, "device_limit", None)
+    old_is_disabled = bool(getattr(dbadmin, "is_disabled", False))
+    old_is_sudo = bool(dbadmin.is_sudo)
     fields_set = getattr(modified_admin, "model_fields_set", None) or getattr(modified_admin, "__fields_set__", set())
+
+    if dbadmin.username == current_admin.username:
+        if "is_disabled" in fields_set and modified_admin.is_disabled is True:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot freeze your own admin account.",
+            )
+        if "is_sudo" in fields_set and modified_admin.is_sudo is False:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot remove sudo from your own account.",
+            )
 
     updated_admin = crud.update_admin(db, dbadmin, modified_admin)
 
     # Audit logs for Admin Manager: track admin limit changes.
     try:
-        actor = crud.get_admin(db, current_admin.username)
+        actor = crud.get_admin(db, current_admin.username) or current_admin
 
         if "traffic_limit" in fields_set and modified_admin.traffic_limit is not None and old_traffic_limit != updated_admin.traffic_limit:
             new_bytes = int(updated_admin.traffic_limit) if updated_admin.traffic_limit is not None else None
@@ -241,6 +289,68 @@ def modify_admin(
                     "new": int(updated_admin.users_limit) if updated_admin.users_limit is not None else None,
                 },
             )
+
+        if "unique_ip_limit" in fields_set and old_unique_ip_limit != updated_admin.unique_ip_limit:
+            crud.create_admin_action_log(
+                db=db,
+                admin=actor,
+                action="admin.unique_ip_limit_set",
+                target_type="admin",
+                target_username=updated_admin.username,
+                meta={
+                    "old": old_unique_ip_limit,
+                    "new": int(updated_admin.unique_ip_limit) if updated_admin.unique_ip_limit is not None else None,
+                },
+            )
+
+        if "device_limit" in fields_set and old_device_limit != updated_admin.device_limit:
+            crud.create_admin_action_log(
+                db=db,
+                admin=actor,
+                action="admin.device_limit_set",
+                target_type="admin",
+                target_username=updated_admin.username,
+                meta={
+                    "old": old_device_limit,
+                    "new": int(updated_admin.device_limit) if updated_admin.device_limit is not None else None,
+                },
+            )
+
+        if "is_disabled" in fields_set and old_is_disabled != bool(getattr(updated_admin, "is_disabled", False)):
+            crud.create_admin_action_log(
+                db=db,
+                admin=actor,
+                action="admin.status_set",
+                target_type="admin",
+                target_username=updated_admin.username,
+                meta={
+                    "old": old_is_disabled,
+                    "new": bool(getattr(updated_admin, "is_disabled", False)),
+                },
+            )
+
+        if "is_sudo" in fields_set and old_is_sudo != bool(updated_admin.is_sudo):
+            crud.create_admin_action_log(
+                db=db,
+                admin=actor,
+                action="admin.sudo_set",
+                target_type="admin",
+                target_username=updated_admin.username,
+                meta={
+                    "old": old_is_sudo,
+                    "new": bool(updated_admin.is_sudo),
+                },
+            )
+
+        if "password" in fields_set and modified_admin.password:
+            crud.create_admin_action_log(
+                db=db,
+                admin=actor,
+                action="admin.password_changed",
+                target_type="admin",
+                target_username=updated_admin.username,
+                meta=None,
+            )
     except Exception as e:
         logger.debug(f"Failed to create audit log for admin modify: {e}")
 
@@ -257,13 +367,32 @@ def remove_admin(
     current_admin: Admin = Depends(Admin.check_sudo_admin),
 ):
     """Remove an admin from the database."""
-    if dbadmin.is_sudo:
+    if dbadmin.username == current_admin.username:
         raise HTTPException(
             status_code=403,
-            detail="You're not allowed to delete sudo accounts. Use xpert-cli instead.",
+            detail="You cannot delete your own admin account.",
+        )
+    if dbadmin.username in SUDOERS:
+        raise HTTPException(
+            status_code=403,
+            detail="Built-in sudo accounts can only be managed from configuration.",
         )
 
+    target_username = dbadmin.username
     crud.remove_admin(db, dbadmin)
+
+    try:
+        actor = crud.get_admin(db, current_admin.username) or current_admin
+        crud.create_admin_action_log(
+            db=db,
+            admin=actor,
+            action="admin.delete",
+            target_type="admin",
+            target_username=target_username,
+            meta=None,
+        )
+    except Exception as e:
+        logger.debug(f"Failed to create audit log for admin delete: {e}")
     return {"detail": "Admin removed successfully"}
 
 
@@ -338,14 +467,14 @@ def reset_admin_usage(
     current_admin: Admin = Depends(Admin.check_sudo_admin)
 ):
     """Resets usage of admin including external traffic."""
-    # Сброс стандартного трафика Xpert
+    # Сброс стандартного трафика Flew
     result = crud.reset_admin_usage(db, dbadmin)
     
-    # Сброс внешнего трафика через Xpert
+    # Сброс внешнего трафика через Flew
     try:
-        from config import XPERT_TRAFFIC_TRACKING_ENABLED
-        if XPERT_TRAFFIC_TRACKING_ENABLED:
-            from app.xpert.traffic_service import traffic_service
+        from config import FLEW_TRAFFIC_TRACKING_ENABLED
+        if FLEW_TRAFFIC_TRACKING_ENABLED:
+            from app.flew.traffic_service import traffic_service
             external_result = traffic_service.reset_admin_external_traffic(dbadmin.username)
             logger.info(f"External traffic reset for {dbadmin.username}: {external_result}")
     except Exception as e:
@@ -365,24 +494,24 @@ def get_admin_usage(
     current_admin: Admin = Depends(Admin.check_sudo_admin)
 ):
     """Retrieve the usage of given admin including external traffic."""
-    # Базовое использование Xpert
-    xpert_usage = dbadmin.users_usage or 0
+    # Базовое использование Flew
+    flew_usage = dbadmin.users_usage or 0
     
-    # Внешний трафик через Xpert
+    # Внешний трафик через Flew
     external_usage = 0
     try:
-        from config import XPERT_TRAFFIC_TRACKING_ENABLED
-        if XPERT_TRAFFIC_TRACKING_ENABLED:
-            from app.xpert.traffic_service import traffic_service
+        from config import FLEW_TRAFFIC_TRACKING_ENABLED
+        if FLEW_TRAFFIC_TRACKING_ENABLED:
+            from app.flew.traffic_service import traffic_service
             external_stats = traffic_service.get_admin_traffic_usage(dbadmin.username)
-            # Конвертируем ГБ в байты (стандарт Xpert)
+            # Конвертируем ГБ в байты (стандарт Flew)
             external_usage = int(external_stats.get("external_traffic_gb", 0) * 1024**3)
             logger.info(f"External traffic for {dbadmin.username}: {external_stats}")
     except Exception as e:
         logger.error(f"Failed to get external traffic: {e}")
     
-    # Общее использование = Xpert + внешний трафик
-    total_usage = xpert_usage + external_usage
+    # Общее использование = Flew + внешний трафик
+    total_usage = flew_usage + external_usage
     
     return total_usage
 
@@ -397,16 +526,16 @@ def get_admin_usage_detailed(
     current_admin: Admin = Depends(Admin.check_sudo_admin)
 ):
     """Retrieve detailed usage including external traffic breakdown."""
-    # Базовое использование Xpert
-    xpert_usage = dbadmin.users_usage or 0
+    # Базовое использование Flew
+    flew_usage = dbadmin.users_usage or 0
     
-    # Внешний трафик через Xpert
+    # Внешний трафик через Flew
     external_stats = {}
     limit_check = {}
     try:
-        from config import XPERT_TRAFFIC_TRACKING_ENABLED
-        if XPERT_TRAFFIC_TRACKING_ENABLED:
-            from app.xpert.traffic_service import traffic_service
+        from config import FLEW_TRAFFIC_TRACKING_ENABLED
+        if FLEW_TRAFFIC_TRACKING_ENABLED:
+            from app.flew.traffic_service import traffic_service
             external_stats = traffic_service.get_admin_traffic_usage(dbadmin.username)
             
             # Проверка лимита трафика
@@ -419,10 +548,10 @@ def get_admin_usage_detailed(
     
     return {
         "username": dbadmin.username,
-        "xpert_usage_bytes": xpert_usage,
-        "xpert_usage_gb": round(xpert_usage / (1024**3), 3) if xpert_usage else 0,
+        "flew_usage_bytes": flew_usage,
+        "flew_usage_gb": round(flew_usage / (1024**3), 3) if flew_usage else 0,
         "external_traffic": external_stats,
-        "total_usage_bytes": xpert_usage + int(external_stats.get("external_traffic_gb", 0) * 1024**3),
+        "total_usage_bytes": flew_usage + int(external_stats.get("external_traffic_gb", 0) * 1024**3),
         "traffic_limit_bytes": dbadmin.traffic_limit,
         "traffic_limit_gb": round(dbadmin.traffic_limit / (1024**3), 3) if dbadmin.traffic_limit else None,
         "limit_check": limit_check.get("within_limit", True) if limit_check else None,
@@ -440,16 +569,16 @@ def reset_external_traffic_only(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(Admin.check_sudo_admin)
 ):
-    """Reset only external traffic (Xpert) for admin."""
+    """Reset only external traffic (Flew) for admin."""
     try:
-        from config import XPERT_TRAFFIC_TRACKING_ENABLED
-        if not XPERT_TRAFFIC_TRACKING_ENABLED:
+        from config import FLEW_TRAFFIC_TRACKING_ENABLED
+        if not FLEW_TRAFFIC_TRACKING_ENABLED:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="External traffic tracking is disabled"
             )
         
-        from app.xpert.traffic_service import traffic_service
+        from app.flew.traffic_service import traffic_service
         result = traffic_service.reset_admin_external_traffic(dbadmin.username)
         logger.info(f"External traffic reset for {dbadmin.username}: {result}")
         return result
@@ -476,14 +605,14 @@ def get_external_traffic_stats(
 ):
     """Get external traffic statistics for admin."""
     try:
-        from config import XPERT_TRAFFIC_TRACKING_ENABLED
-        if not XPERT_TRAFFIC_TRACKING_ENABLED:
+        from config import FLEW_TRAFFIC_TRACKING_ENABLED
+        if not FLEW_TRAFFIC_TRACKING_ENABLED:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="External traffic tracking is disabled"
             )
         
-        from app.xpert.traffic_service import traffic_service
+        from app.flew.traffic_service import traffic_service
         stats = traffic_service.get_admin_traffic_usage(dbadmin.username, days)
         
         # Проверка лимита

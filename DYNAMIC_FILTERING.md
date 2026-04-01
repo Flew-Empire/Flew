@@ -2,7 +2,7 @@
 
 ## 🎯 Концепция
 
-Xpert Panel теперь использует **умную систему рейтинга** - в подписку попадают только топ-10 лучших серверов, остальные ждут своей очереди.
+Flew Panel теперь использует **умную систему рейтинга** - в подписку попадают только топ-10 лучших серверов, остальные ждут своей очереди.
 
 ## 📋 Как это работает
 
@@ -23,7 +23,7 @@ Xpert Panel теперь использует **умную систему рей
 
 ## 🛠 API для управления рейтингом
 
-### **GET /api/xpert/top-configs?limit=10**
+### **GET /api/flew/top-configs?limit=10**
 Получение топ-N серверов с рейтингом:
 
 ```json
@@ -48,7 +48,7 @@ Xpert Panel теперь использует **умную систему рей
 }
 ```
 
-### **GET /api/xpert/queue-configs**
+### **GET /api/flew/queue-configs**
 Получение серверов в очереди:
 
 ```json
@@ -62,13 +62,13 @@ Xpert Panel теперь использует **умную систему рей
 
 ```bash
 # Количество топ серверов в подписке
-XPERT_TOP_SERVERS_LIMIT=10
+FLEW_TOP_SERVERS_LIMIT=10
 
 # Включить динамическую фильтрацию
-XPERT_USE_DYNAMIC_FILTERING=true
+FLEW_USE_DYNAMIC_FILTERING=true
 
 # Минимальное количество пользователей для статистики
-XPERT_MIN_USERS_FOR_STATS=3
+FLEW_MIN_USERS_FOR_STATS=3
 ```
 
 ## 🔄 Расчет рейтинга
@@ -124,23 +124,23 @@ Total Score: 91 балл
 
 ### **Статистика системы:**
 ```bash
-curl https://your-domain.com/api/xpert/ping-stats
+curl https://your-domain.com/api/flew/ping-stats
 ```
 
 ### **Рейтинг конкретного сервера:**
 ```bash
-curl https://your-domain.com/api/xpert/server-health/example.com/443/vless
+curl https://your-domain.com/api/flew/server-health/example.com/443/vless
 ```
 
 ### **Текущий топ-10:**
 ```bash
-curl https://your-domain.com/api/xpert/top-configs
+curl https://your-domain.com/api/flew/top-configs
 ```
 
 ## 📝 Пример использования
 
 ### **Администратор:**
-- Настроил `XPERT_TOP_SERVERS_LIMIT=15`
+- Настроил `FLEW_TOP_SERVERS_LIMIT=15`
 - Следит за топом через API
 - Анализирует очередь серверов
 

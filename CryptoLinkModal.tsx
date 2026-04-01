@@ -51,7 +51,7 @@ export function CryptoLinkModal() {
         return;
       }
       setIsResetting(true);
-      const resp: any = await fetch("/xpert/hwid/reset", { method: "POST", body: { username } });
+      const resp: any = await fetch("/flew/hwid/reset", { method: "POST", body: { username } });
       if (resp && resp.cleared) {
         toast({ title: t("cryptoLink.hwidResetDone"), status: "success", duration: 1500, isClosable: true });
       } else {
@@ -83,7 +83,7 @@ export function CryptoLinkModal() {
       if (hwidLimit) {
         body.hwid_limit = Number(hwidLimit);
       }
-      const resp: any = await fetch("/xpert/crypto-link", { method: "POST", body });
+      const resp: any = await fetch("/flew/crypto-link", { method: "POST", body });
       const link = (resp && (resp.encrypted_link || resp.link || resp.url || resp.result || resp.data || resp.encrypted)) || resp;
       if (!link || typeof link !== "string") {
         throw new Error("Invalid response");

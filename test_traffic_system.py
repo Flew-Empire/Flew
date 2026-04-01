@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Тестирование системы мониторинга трафика Xpert Panel
+Тестирование системы мониторинга трафика Flew Panel
 """
 
 import sys
@@ -13,7 +13,7 @@ from datetime import datetime
 # Добавляем путь к app
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.xpert.traffic_service import traffic_service
+from app.flew.traffic_service import traffic_service
 
 
 async def test_traffic_service():
@@ -78,7 +78,7 @@ async def test_api_endpoints(base_url="http://localhost:8000"):
         }
         
         try:
-            async with session.post(f"{base_url}/api/xpert/traffic-webhook", 
+            async with session.post(f"{base_url}/api/flew/traffic-webhook", 
                                json=webhook_data) as resp:
                 if resp.status == 200:
                     print("✅ Webhook test passed")
@@ -91,7 +91,7 @@ async def test_api_endpoints(base_url="http://localhost:8000"):
         
         # Тест статистики пользователя
         try:
-            async with session.get(f"{base_url}/api/xpert/traffic-stats/test_user_456") as resp:
+            async with session.get(f"{base_url}/api/flew/traffic-stats/test_user_456") as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     print(f"✅ User stats API test passed: {data.get('total_gb_used', 0)} GB")
@@ -102,7 +102,7 @@ async def test_api_endpoints(base_url="http://localhost:8000"):
         
         # Тест глобальной статистики
         try:
-            async with session.get(f"{base_url}/api/xpert/traffic-stats/global") as resp:
+            async with session.get(f"{base_url}/api/flew/traffic-stats/global") as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     print(f"✅ Global stats API test passed: {data.get('total_users', 0)} users")
@@ -113,7 +113,7 @@ async def test_api_endpoints(base_url="http://localhost:8000"):
         
         # Тест информации о БД
         try:
-            async with session.get(f"{base_url}/api/xpert/traffic-stats/database/info") as resp:
+            async with session.get(f"{base_url}/api/flew/traffic-stats/database/info") as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     print(f"✅ DB info API test passed: {data.get('total_records', 0)} records")
@@ -122,17 +122,17 @@ async def test_api_endpoints(base_url="http://localhost:8000"):
         except Exception as e:
             print(f"❌ DB info API test error: {e}")
         
-        # Тест Xpert Core интеграции
+        # Тест Flew Core интеграции
         try:
-            async with session.get(f"{base_url}/api/xpert/core-traffic-stats") as resp:
+            async with session.get(f"{base_url}/api/flew/core-traffic-stats") as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     external = data.get('users_traffic', {}).get('external_servers', False)
-                    print(f"✅ Xpert Core integration test passed: external_servers={external}")
+                    print(f"✅ Flew Core integration test passed: external_servers={external}")
                 else:
-                    print(f"❌ Xpert Core integration test failed: {resp.status}")
+                    print(f"❌ Flew Core integration test failed: {resp.status}")
         except Exception as e:
-            print(f"❌ Xpert Core integration test error: {e}")
+            print(f"❌ Flew Core integration test error: {e}")
     
     return True
 
@@ -144,7 +144,7 @@ async def test_subscription_endpoints(base_url="http://localhost:8000"):
     async with aiohttp.ClientSession() as session:
         # Тест базовой подписки
         try:
-            async with session.get(f"{base_url}/api/xpert/sub?user_token=test_user_789") as resp:
+            async with session.get(f"{base_url}/api/flew/sub?user_token=test_user_789") as resp:
                 if resp.status == 200:
                     headers = dict(resp.headers)
                     webhook_url = headers.get('Traffic-Webhook', '')
@@ -159,7 +159,7 @@ async def test_subscription_endpoints(base_url="http://localhost:8000"):
         
         # Тест direct configs подписки
         try:
-            async with session.get(f"{base_url}/api/xpert/direct-configs/sub?user_token=test_user_789") as resp:
+            async with session.get(f"{base_url}/api/flew/direct-configs/sub?user_token=test_user_789") as resp:
                 if resp.status == 200:
                     headers = dict(resp.headers)
                     webhook_url = headers.get('Traffic-Webhook', '')
@@ -190,25 +190,25 @@ def print_usage_examples():
     print(json.dumps(webhook_example, indent=2))
     
     print("\n2. Получение статистики пользователя:")
-    print("GET /api/xpert/traffic-stats/user123?days=30")
+    print("GET /api/flew/traffic-stats/user123?days=30")
     
     print("\n3. Получение глобальной статистики:")
-    print("GET /api/xpert/traffic-stats/global?days=30")
+    print("GET /api/flew/traffic-stats/global?days=30")
     
-    print("\n4. Статистика для Xpert Core UI:")
-    print("GET /api/xpert/core-traffic-stats?days=30")
+    print("\n4. Статистика для Flew Core UI:")
+    print("GET /api/flew/core-traffic-stats?days=30")
     
     print("\n5. Очистка старой статистики:")
-    print("POST /api/xpert/traffic-stats/cleanup?days=90")
+    print("POST /api/flew/traffic-stats/cleanup?days=90")
     
     print("\n6. Подписка с отслеживанием:")
-    print("GET /api/xpert/sub?user_token=user123")
+    print("GET /api/flew/sub?user_token=user123")
     print("Headers: Traffic-Webhook, User-Token")
 
 
 async def main():
     """Основная функция тестирования"""
-    print("🚀 Xpert Panel Traffic Monitoring System Test")
+    print("🚀 Flew Panel Traffic Monitoring System Test")
     print("=" * 50)
     
     # Тестирование сервиса
@@ -235,10 +235,10 @@ async def main():
     
     print("\n✅ Testing completed!")
     print("\n📝 Next steps:")
-    print("1. Start the Xpert Panel server")
+    print("1. Start the Flew Panel server")
     print("2. Test subscription URLs with tracking")
     print("3. Implement client-side webhook calls")
-    print("4. Monitor traffic in Xpert Core UI")
+    print("4. Monitor traffic in Flew Core UI")
 
 
 if __name__ == "__main__":

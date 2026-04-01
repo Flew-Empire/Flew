@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -21,12 +22,16 @@ class Token(BaseModel):
 class Admin(BaseModel):
     username: str
     is_sudo: bool
+    is_disabled: bool = False
     is_primary_sudo: bool = False
+    created_at: Optional[datetime] = None
     telegram_id: Optional[int] = None
     discord_webhook: Optional[str] = None
     users_usage: Optional[int] = None
     traffic_limit: Optional[int] = None
     users_limit: Optional[int] = None
+    unique_ip_limit: Optional[int] = None
+    device_limit: Optional[int] = None
     subscription_url_prefix: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,7 +44,13 @@ class Admin(BaseModel):
         except (ValueError, TypeError):
             raise ValueError("must be an integer or a float")
 
-    @field_validator("traffic_limit", "users_limit", mode="before")
+    @field_validator(
+        "traffic_limit",
+        "users_limit",
+        "unique_ip_limit",
+        "device_limit",
+        mode="before",
+    )
     def cast_limits(cls, v):
         if v is None:
             return v
@@ -62,6 +73,9 @@ class Admin(BaseModel):
 
         dbadmin = crud.get_admin(db, payload['username'])
         if not dbadmin:
+            return
+
+        if getattr(dbadmin, "is_disabled", False):
             return
 
         if dbadmin.password_reset_at:
@@ -108,10 +122,13 @@ class Admin(BaseModel):
 
 class AdminCreate(Admin):
     password: str
+    is_disabled: bool = False
     telegram_id: Optional[int] = None
     discord_webhook: Optional[str] = None
     traffic_limit: Optional[int] = None
     users_limit: Optional[int] = None
+    unique_ip_limit: Optional[int] = None
+    device_limit: Optional[int] = None
     subscription_url_prefix: Optional[str] = None
 
     @property
@@ -129,10 +146,13 @@ class AdminCreate(Admin):
 class AdminModify(BaseModel):
     password: Optional[str] = None
     is_sudo: bool
+    is_disabled: Optional[bool] = None
     telegram_id: Optional[int] = None
     discord_webhook: Optional[str] = None
     traffic_limit: Optional[int] = None
     users_limit: Optional[int] = None
+    unique_ip_limit: Optional[int] = None
+    device_limit: Optional[int] = None
     subscription_url_prefix: Optional[str] = None
 
     @property

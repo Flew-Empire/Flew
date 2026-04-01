@@ -117,6 +117,7 @@ export const Pagination: FC = () => {
       <Box order={{ base: 2, md: 1 }}>
         <HStack>
           <Select
+            className="pagination-page-size filters-theme-select"
             minW="60px"
             value={perPage}
             onChange={handlePageSizeChange}

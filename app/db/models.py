@@ -45,12 +45,15 @@ class Admin(Base):
     users = relationship("User", back_populates="admin")
     created_at = Column(DateTime, default=datetime.utcnow)
     is_sudo = Column(Boolean, default=False)
+    is_disabled = Column(Boolean, nullable=False, default=False)
     password_reset_at = Column(DateTime, nullable=True)
     telegram_id = Column(BigInteger, nullable=True, default=None)
     discord_webhook = Column(String(1024), nullable=True, default=None)
     users_usage = Column(BigInteger, nullable=False, default=0)
     traffic_limit = Column(BigInteger, nullable=True, default=None)
     users_limit = Column(Integer, nullable=True, default=None)
+    unique_ip_limit = Column(Integer, nullable=True, default=None)
+    device_limit = Column(Integer, nullable=True, default=None)
     subscription_url_prefix = Column(String(512), nullable=True, default=None)
     usage_logs = relationship("AdminUsageLogs", back_populates="admin")
 
@@ -81,6 +84,98 @@ class AdminActionLog(Base):
     meta = Column(JSON, nullable=True)
 
 
+class AdminChatPermission(Base):
+    __tablename__ = "admin_chat_permissions"
+    __table_args__ = (
+        UniqueConstraint("admin_low", "admin_high", name="uq_admin_chat_permission_pair"),
+        Index("idx_admin_chat_permission_low", "admin_low"),
+        Index("idx_admin_chat_permission_high", "admin_high"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    admin_low = Column(String(34), nullable=False)
+    admin_high = Column(String(34), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_by_username = Column(String(34), nullable=True, default=None)
+
+
+class AdminChatMessage(Base):
+    __tablename__ = "admin_chat_messages"
+    __table_args__ = (
+        Index(
+            "idx_admin_chat_messages_pair_created",
+            "admin_low",
+            "admin_high",
+            "created_at",
+        ),
+        Index(
+            "idx_admin_chat_messages_recipient_read",
+            "recipient_username",
+            "read_at",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    admin_low = Column(String(34), nullable=False)
+    admin_high = Column(String(34), nullable=False)
+    sender_username = Column(String(34), nullable=False)
+    recipient_username = Column(String(34), nullable=False)
+    body = Column(String(4000), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    read_at = Column(DateTime, nullable=True, default=None)
+
+
+class AdminBillingProfile(Base):
+    __tablename__ = "admin_billing_profiles"
+    __table_args__ = (
+        Index("idx_admin_billing_profiles_admin", "admin_username"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    admin_username = Column(String(34), unique=True, nullable=False)
+    unit_price_cents = Column(Integer, nullable=True, default=None)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_by_username = Column(String(34), nullable=True, default=None)
+
+
+class AdminBillingInvoice(Base):
+    __tablename__ = "admin_billing_invoices"
+    __table_args__ = (
+        Index("idx_admin_billing_invoices_admin_status", "admin_username", "status"),
+        Index("idx_admin_billing_invoices_opened_at", "opened_at"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    admin_username = Column(String(34), nullable=False)
+    status = Column(String(16), nullable=False, default="open")
+    opened_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    closed_at = Column(DateTime, nullable=True, default=None)
+    closed_by_username = Column(String(34), nullable=True, default=None)
+    entries = relationship("AdminBillingEntry", back_populates="invoice")
+
+
+class AdminBillingEntry(Base):
+    __tablename__ = "admin_billing_entries"
+    __table_args__ = (
+        UniqueConstraint("action_log_id", name="uq_admin_billing_entry_action_log"),
+        Index("idx_admin_billing_entries_admin_created", "admin_username", "created_at"),
+        Index("idx_admin_billing_entries_invoice", "invoice_id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    invoice_id = Column(Integer, ForeignKey("admin_billing_invoices.id"), nullable=False)
+    action_log_id = Column(Integer, ForeignKey("admin_action_logs.id"), nullable=False)
+    admin_username = Column(String(34), nullable=False)
+    event_type = Column(String(32), nullable=False)
+    action = Column(String(64), nullable=False)
+    target_username = Column(String(34), nullable=True, default=None)
+    unit_price_cents = Column(Integer, nullable=False, default=0)
+    amount_cents = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    meta = Column(JSON, nullable=True)
+    invoice = relationship("AdminBillingInvoice", back_populates="entries")
+
+
 class InstallOtp(Base):
     __tablename__ = "install_otps"
     __table_args__ = (
@@ -90,9 +185,9 @@ class InstallOtp(Base):
 
     id = Column(Integer, primary_key=True)
     code = Column(String(32), unique=True, index=True, nullable=False)
-    product = Column(String(20), nullable=False, default="xpert")
+    product = Column(String(20), nullable=False, default="flew")
     bound_ip = Column(String(128), nullable=True, default=None)
-    edition = Column(String(20), nullable=False, default="standard")
+    edition = Column(String(20), nullable=False, default="start")
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     used_at = Column(DateTime, nullable=True, default=None)

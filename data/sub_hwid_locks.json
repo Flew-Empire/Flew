@@ -1,0 +1,120 @@
+{
+  "locks": {
+    "t20VGd": {
+      "updated_at": "2026-03-27T20:37:37.838258",
+      "hwid": "236345784568",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "d25aa51c314c8a7a",
+        "236345784568"
+      ]
+    },
+    "Bdogany27": {
+      "updated_at": "2026-03-27T20:42:01.542650",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "e7b91aef5d16aa94"
+      ]
+    },
+    "Meylistest": {
+      "updated_at": "2026-03-29T18:49:37.792480",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "e7b91aef5d16aa94"
+      ]
+    },
+    "G_Jahan1": {
+      "updated_at": "2026-03-30T07:11:42.872370",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "759ec25c00bdd03c"
+      ]
+    },
+    "Nelya": {
+      "updated_at": "2026-03-30T07:54:33.117968",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "ea1df21d30a36373"
+      ]
+    },
+    "MayaKurs": {
+      "updated_at": "2026-03-30T10:54:50.656935",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "4465d46e0a34aa5c"
+      ]
+    },
+    "N_Geldi": {
+      "updated_at": "2026-03-31T10:39:42.865929",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "e95cf3bcfaa935b8"
+      ]
+    },
+    "N_Geldi2": {
+      "updated_at": "2026-03-31T05:24:48.625381",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "e9c9c1dd4b8ef41e"
+      ]
+    },
+    "IL_4": {
+      "updated_at": "2026-03-31T11:30:16.686541",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "9c51f2ee9968e041"
+      ]
+    },
+    "BaharNuryyewa": {
+      "updated_at": "2026-03-31T10:16:06.762305",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "40b6ce008287761a"
+      ]
+    },
+    "G_Sara": {
+      "updated_at": "2026-03-31T11:54:30.730252",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "bb06b5d983a0e3ca"
+      ]
+    },
+    "Rusikpapa": {
+      "updated_at": "2026-03-31T10:49:57.502287",
+      "max_unique_hwid": 1
+    },
+    "N_Serdar": {
+      "updated_at": "2026-03-31T15:51:14.439755",
+      "max_unique_hwid": 1
+    },
+    "N_Dowlet": {
+      "updated_at": "2026-03-31T15:51:57.151801",
+      "max_unique_hwid": 1
+    },
+    "N_Enejan": {
+      "updated_at": "2026-03-31T17:30:32.820277",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "53c0a6ce619587d5"
+      ]
+    },
+    "G_AtajanHasanow": {
+      "updated_at": "2026-04-01T05:10:27.686965",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "0ce6d052e9010fdf"
+      ]
+    },
+    "G_Omar": {
+      "updated_at": "2026-04-01T02:25:53.317383",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "bdfe0cf16c2a6fdc"
+      ]
+    },
+    "G_Nazira": {
+      "updated_at": "2026-03-31T19:22:25.965769",
+      "max_unique_hwid": 1
+    }
+  }
+}

@@ -14,7 +14,7 @@ def _resolve_script() -> Path:
 
 @app.callback(invoke_without_command=True)
 def show_menu(
-    env: str = typer.Option("/opt/xpert/.env", "--env", help="Env file path."),
+    env: str = typer.Option("/opt/flew/.env", "--env", help="Env file path."),
 ):
     """Show captcha setup menu."""
     script = _resolve_script()

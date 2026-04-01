@@ -10,10 +10,12 @@ export const Footer: FC<BoxProps> = (props) => {
         display="inline-block"
         flexGrow={1}
         textAlign="center"
-        color="gray.500"
+        color="var(--faint)"
         fontSize="xs"
+        fontWeight="700"
+        fontStyle="italic"
       >
-        Flew (v1.0) from Ashgabat
+        Flew v1.0
       </Text>
     </HStack>
   );

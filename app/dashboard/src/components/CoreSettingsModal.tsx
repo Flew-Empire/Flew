@@ -320,13 +320,9 @@ const CoreSettingModalContent: FC = () => {
           </HStack>
           <Box
             border="1px solid"
-            borderColor="gray.300"
-            bg="#F9F9F9"
-            _dark={{
-              borderColor: "gray.500",
-              bg: "#2e3440",
-            }}
-            borderRadius={5}
+            borderColor="var(--border)"
+            bg="var(--input-bg)"
+            borderRadius="14px"
             minHeight="200px"
             maxHeight={"250px"}
             p={2}

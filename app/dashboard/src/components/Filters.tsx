@@ -17,7 +17,9 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import classNames from "classnames";
+import { PrefetchLink } from "components/PrefetchLink";
 import { useDashboard } from "contexts/DashboardContext";
+import useGetUser from "hooks/useGetUser";
 import { useFeatures } from "hooks/useFeatures";
 import debounce from "lodash.debounce";
 import React, { FC, useEffect, useState } from "react";
@@ -51,13 +53,12 @@ const setSearchField = debounce((search: string) => {
 }, 300);
 
 export const Filters: FC<FilterProps> = ({ ...props }) => {
-  const { loading, filters, onFilterChange, refetchUsers, onCreateUser } =
-    useDashboard();
+  const { loading, filters, onFilterChange, refetchUsers } = useDashboard();
   const { t } = useTranslation();
   const { hasFeature } = useFeatures();
+  const { userData, getUserIsSuccess } = useGetUser();
   const [search, setSearch] = useState("");
   const [admins, setAdmins] = useState<AdminItem[]>([]);
-  const [me, setMe] = useState<AdminItem | null>(null);
   const [isScrollBlurActive, setIsScrollBlurActive] = useState(false);
 
   useEffect(() => {
@@ -73,52 +74,42 @@ export const Filters: FC<FilterProps> = ({ ...props }) => {
   }, []);
 
   useEffect(() => {
+    if (!getUserIsSuccess || !userData?.username) {
+      return;
+    }
+
     let alive = true;
+    const currentAdmin = {
+      username: userData.username,
+      is_sudo: !!userData.is_sudo,
+    };
+
+    if (!currentAdmin.is_sudo) {
+      setAdmins([currentAdmin]);
+      return;
+    }
+
     (async () => {
       try {
-        const currentAdmin = await fetch("/admin");
+        const all = await fetch("/admins");
         if (!alive) return;
-        setMe({ username: currentAdmin.username, is_sudo: !!currentAdmin.is_sudo });
-
-        if (currentAdmin?.is_sudo) {
-          try {
-            const all = await fetch("/admins");
-            if (!alive) return;
-            const list = Array.isArray(all) ? all : [];
-            const hasMe = list.some((a) => a?.username === currentAdmin.username);
-            setAdmins(
-              hasMe
-                ? list
-                : [
-                    {
-                      username: currentAdmin.username,
-                      is_sudo: !!currentAdmin.is_sudo,
-                    },
-                    ...list,
-                  ]
-            );
-          } catch {
-            setAdmins([
-              {
-                username: currentAdmin.username,
-                is_sudo: !!currentAdmin.is_sudo,
-              },
-            ]);
-          }
-        } else {
-          setAdmins([
-            { username: currentAdmin.username, is_sudo: !!currentAdmin.is_sudo },
-          ]);
-        }
+        const list = Array.isArray(all) ? all : [];
+        const hasMe = list.some((a) => a?.username === currentAdmin.username);
+        setAdmins(
+          hasMe
+            ? list
+            : [currentAdmin, ...list]
+        );
       } catch {
-        setAdmins([]);
+        if (!alive) return;
+        setAdmins([currentAdmin]);
       }
     })();
 
     return () => {
       alive = false;
     };
-  }, []);
+  }, [getUserIsSuccess, userData?.username, userData?.is_sudo]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -153,6 +144,10 @@ export const Filters: FC<FilterProps> = ({ ...props }) => {
   };
 
   const canUseAdminFilter = hasFeature("admin_filter");
+  const me =
+    getUserIsSuccess && userData?.username
+      ? { username: userData.username, is_sudo: !!userData.is_sudo }
+      : null;
   const canShowAdminFilter = !!me?.is_sudo && canUseAdminFilter;
   const selectedValue =
     filters.admin === me?.username ? "__sudo_self__" : filters.admin || "__all__";
@@ -173,28 +168,13 @@ export const Filters: FC<FilterProps> = ({ ...props }) => {
   return (
     <Box
       id="filters"
-      position="sticky"
-      top={0}
-      mx="-6"
-      px="6"
-      rowGap={4}
-      bg={isScrollBlurActive ? "rgba(40, 50, 65, 0.85)" : "transparent"}
-      _dark={{
-        bg: isScrollBlurActive ? "rgba(40, 50, 65, 0.85)" : "transparent",
-        borderColor: isScrollBlurActive
-          ? "rgba(255, 255, 255, 0.12)"
-          : "transparent",
-      }}
-      borderBottomWidth="1px"
-      borderColor={isScrollBlurActive ? "rgba(255, 255, 255, 0.08)" : "transparent"}
-      backdropFilter={isScrollBlurActive ? "blur(8px)" : "none"}
-      WebkitBackdropFilter={isScrollBlurActive ? "blur(8px)" : "none"}
-      boxShadow={isScrollBlurActive ? "0 8px 20px rgba(0, 0, 0, 0.18)" : "none"}
-      transition="background-color .18s ease, backdrop-filter .18s ease, border-color .18s ease, box-shadow .18s ease"
-      py={4}
-      zIndex="docked"
-      borderRadius={isScrollBlurActive ? "16px" : "0"}
-      className={isScrollBlurActive ? "glass-header" : ""}
+      className="filters-shell"
+      px="24px"
+      py="18px"
+      borderBottom="1px solid var(--divider)"
+      position="relative"
+      zIndex={6}
+      isolation="isolate"
       {...props}
     >
       <Box
@@ -231,33 +211,34 @@ export const Filters: FC<FilterProps> = ({ ...props }) => {
         >
           <Button
             size="sm"
-            onClick={() => onCreateUser(true)}
+            as={PrefetchLink}
+            to="/subscription/new/"
+            preload="subscriptionEditor"
+            onClick={() => {
+              useDashboard.getState().onEditingUser(null);
+              useDashboard.getState().onCreateUser(true);
+            }}
             px={6}
             py={5}
             borderRadius="12px"
-            bg="rgba(99, 102, 241, 0.2)"
-            color="#818cf8"
-            border="1px solid rgba(99, 102, 241, 0.3)"
+            bg="var(--active)"
+            color="var(--blue)"
+            border="1px solid var(--blue-border)"
             fontWeight="600"
             fontSize="13px"
-            _dark={{
-              bg: "rgba(99, 102, 241, 0.25)",
-              color: "#818cf8",
-              border: "1px solid rgba(99, 102, 241, 0.4)",
-              boxShadow: "0 4px 15px rgba(99, 102, 241, 0.3)",
-              _hover: {
-                bg: "rgba(99, 102, 241, 0.35)",
-                boxShadow: "0 6px 20px rgba(99, 102, 241, 0.4)",
-                transform: "translateY(-2px)",
-              },
-              _active: {
-                transform: "translateY(0)",
-              },
+            boxShadow="0 6px 16px rgba(37, 99, 235, 0.1)"
+            _hover={{
+              bg: "var(--blue-soft)",
+              transform: "translateY(-1px)",
+              boxShadow: "0 8px 18px rgba(37, 99, 235, 0.12)",
+            }}
+            _active={{
+              transform: "translateY(0)",
             }}
             transition="all 0.3s ease"
             w="full"
           >
-            + {t("createUser")}
+            {t("createUser")}
           </Button>
         </Box>
 
@@ -298,15 +279,17 @@ export const Filters: FC<FilterProps> = ({ ...props }) => {
             gridColumn={{ base: "1 / -1", lg: "2" }}
             gridRow={{ base: "3", lg: "1" }}
           >
-            <Select
-              className="admin-filter-select"
-              size="md"
-              borderColor="light-border"
-              _dark={{ bg: "gray.750", borderColor: "gray.600" }}
-              value={selectedValue}
-              onChange={onAdminFilterChange}
-              w="full"
-            >
+          <Select
+            className="admin-filter-select filters-theme-select"
+            size="md"
+            borderColor="light-border"
+            _dark={{ bg: "gray.750", borderColor: "gray.600" }}
+            value={selectedValue}
+            onChange={onAdminFilterChange}
+            w="full"
+            position="relative"
+            zIndex={2}
+          >
               <option value="__all__">{allAdminLabel}</option>
               <option value="__sudo_self__">{me?.username} (sudo)</option>
               {admins
@@ -329,20 +312,22 @@ export const Filters: FC<FilterProps> = ({ ...props }) => {
           gridRow={{ base: canShowAdminFilter ? "4" : "3", lg: "1" }}
         >
           <Select
-            className="admin-filter-select"
+            className="admin-filter-select filters-theme-select"
             size="md"
             borderColor="light-border"
             _dark={{ bg: "gray.750", borderColor: "gray.600" }}
             value={filters.status || ""}
             onChange={onStatusFilterChange}
             w="full"
+            position="relative"
+            zIndex={2}
           >
             <option value="">{allStatusLabel}</option>
-            <option value="active">Active</option>
-            <option value="on_hold">On Hold</option>
-            <option value="disabled">Disabled</option>
-            <option value="limited">Limited</option>
-            <option value="expired">Expired</option>
+            <option value="active">{t("status.active")}</option>
+            <option value="on_hold">{t("status.on_hold")}</option>
+            <option value="disabled">{t("status.disabled")}</option>
+            <option value="limited">{t("status.limited")}</option>
+            <option value="expired">{t("status.expired")}</option>
           </Select>
         </Box>
       </Box>
