@@ -12,6 +12,7 @@ import {
   Text,
   VStack,
   chakra,
+  useBreakpointValue,
   useColorMode,
 } from "@chakra-ui/react";
 import { ChartPieIcon } from "@heroicons/react/24/outline";
@@ -39,6 +40,8 @@ export const NodesUsage: FC<NodesUsageProps> = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { colorMode } = useColorMode();
+  const chartHeight = useBreakpointValue({ base: "320px", md: "500px" });
+  const chartWidth = useBreakpointValue({ base: "100%", md: "300px" });
 
   const usageTitle = t("userDialog.total");
   const [usage, setUsage] = useState(createUsageConfig(colorMode, usageTitle));
@@ -95,13 +98,13 @@ export const NodesUsage: FC<NodesUsageProps> = () => {
                 fetchUsageWithFilter(query);
               }}
             />
-            <Box justifySelf="center" w="full" maxW="300px" mt="4">
+            <Box justifySelf="center" w="full" maxW={chartWidth} mt="4">
               <Suspense fallback={<CircularProgress isIndeterminate />}>
                 <ReactApexChart
                   options={usage.options}
                   series={usage.series}
                   type="donut"
-                  height="500px"
+                  height={chartHeight}
                 />
               </Suspense>
             </Box>

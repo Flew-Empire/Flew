@@ -284,7 +284,7 @@ export const UserDialog: FC<UserDialogProps> = () => {
       form.reset(formatUser(editingUser));
 
       // Load per-user unique IP limit (2h window) for non-Happ clients.
-      fetch(`/xpert/ip-limit/${encodeURIComponent(editingUser.username)}`)
+      fetch(`/flew/ip-limit/${encodeURIComponent(editingUser.username)}`)
         .then((resp: any) => {
           const limit = resp?.limit ?? 3;
           form.setValue("unique_ip_limit", String(limit));
@@ -328,7 +328,7 @@ export const UserDialog: FC<UserDialogProps> = () => {
         // Apply unique IP limit setting (default=3 clears override on backend).
         const limitNum = Number(unique_ip_limit || "3");
         try {
-          await fetch("/xpert/ip-limit", {
+          await fetch("/flew/ip-limit", {
             method: "POST",
             body: { username: values.username, limit: limitNum },
           });

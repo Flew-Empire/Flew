@@ -1,4 +1,4 @@
-# Dashboard UI for xpert
+# Dashboard UI for flew
 
 ## Requirements
 
@@ -25,7 +25,7 @@ Copy `example.env` to `.env` then set the backend api address:
 
 | Name          | Description                                                                          |
 | ------------- | ------------------------------------------------------------------------------------ |
-| VITE_BASE_API | The api url of the deployed backend ([Xpert](https://github.com/gozargah/Xpert)) |
+| VITE_BASE_API | The api url of the deployed backend ([Flew](https://github.com/gozargah/Flew)) |
 
 ## Start development server
 

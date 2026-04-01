@@ -58,7 +58,7 @@ export const AdminManager = () => {
   const loadAdmins = async () => {
     try {
       setLoadingAdmins(true);
-      const resp = await fetch("/xpert/admin-manager/admins");
+      const resp = await fetch("/flew/admin-manager/admins");
       setAdmins(resp || []);
       if (!selected && resp?.length) setSelected(resp[0].username);
     } catch (e: any) {
@@ -77,7 +77,7 @@ export const AdminManager = () => {
   const loadActions = async (adminUsername: string, nextOffset: number) => {
     try {
       setLoadingActions(true);
-      const resp = await fetch(`/xpert/admin-manager/actions/${encodeURIComponent(adminUsername)}`, {
+      const resp = await fetch(`/flew/admin-manager/actions/${encodeURIComponent(adminUsername)}`, {
         query: { offset: nextOffset, limit },
       } as any);
       setActionsTotal(resp?.total ?? 0);

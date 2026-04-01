@@ -26,6 +26,7 @@ import {
 } from "@chakra-ui/react";
 import { FC, useEffect, useMemo, useState } from "react";
 import { fetch } from "../service/http";
+import { copyToClipboard } from "../utils/clipboard";
 
 interface InstallOtp {
   id: number;
@@ -40,7 +41,23 @@ interface InstallOtp {
   note?: string | null;
 }
 
-const DEFAULT_INSTALL_DOMAIN = "flew.mediatmshow.online";
+const DEFAULT_INSTALL_DOMAIN = "merkez.mediatmshow.online";
+const normalizeEdition = (value?: string | null) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return "start";
+  if (normalized === "standard") return "start";
+  if (normalized === "full") return "pro";
+  if (normalized === "custom") return "x";
+  return normalized;
+};
+
+const editionLabel = (value?: string | null) => {
+  const normalized = normalizeEdition(value);
+  if (normalized === "start") return "Start";
+  if (normalized === "pro") return "Pro";
+  if (normalized === "x") return "X";
+  return value || "-";
+};
 
 const normalizeIso = (value?: string | null) => {
   if (!value) return "";
@@ -89,7 +106,7 @@ const buildInstallCommand = (otp: InstallOtp) => {
   const domain = DEFAULT_INSTALL_DOMAIN;
   const product = (otp.product || "flew").toLowerCase();
   if (product === "marzban_patch") {
-    const editionValue = (otp.edition || "standard").toLowerCase();
+    const editionValue = normalizeEdition(otp.edition);
     return [
       `curl -fsSL https://${domain}/api/install/marzban/script | bash -s --`,
       `--domain ${domain}`,
@@ -98,7 +115,7 @@ const buildInstallCommand = (otp: InstallOtp) => {
       `--target /opt/marzban`,
     ].join(" ");
   }
-  const editionValue = (otp.edition || "standard").toLowerCase();
+  const editionValue = normalizeEdition(otp.edition);
   return [
     `curl -fsSL https://${domain}/api/install/script | bash -s --`,
     `--domain ${domain}`,
@@ -114,7 +131,7 @@ export const InstallOtpManager: FC = () => {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [expiresIn, setExpiresIn] = useState("30");
   const [product, setProduct] = useState("flew");
-  const [edition, setEdition] = useState("standard");
+  const [edition, setEdition] = useState("start");
   const [boundIp, setBoundIp] = useState("");
   const [note, setNote] = useState("");
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -196,14 +213,14 @@ export const InstallOtpManager: FC = () => {
   };
 
   const handleCopy = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
+    const success = await copyToClipboard(code);
+    if (success) {
       toast({
         title: "Copied",
         status: "success",
         duration: 1500,
       });
-    } catch (error) {
+    } else {
       toast({
         title: "Copy failed",
         status: "error",
@@ -214,14 +231,14 @@ export const InstallOtpManager: FC = () => {
 
   const handleCopyCommand = async (otp: InstallOtp) => {
     const command = buildInstallCommand(otp);
-    try {
-      await navigator.clipboard.writeText(command);
+    const success = await copyToClipboard(command);
+    if (success) {
       toast({
         title: "Install command copied",
         status: "success",
         duration: 2000,
       });
-    } catch (error) {
+    } else {
       toast({
         title: "Copy failed",
         status: "error",
@@ -295,9 +312,9 @@ export const InstallOtpManager: FC = () => {
           <FormControl>
             <FormLabel>Edition</FormLabel>
             <Select value={edition} onChange={(e) => setEdition(e.target.value)}>
-              <option value="standard">Standard</option>
-              <option value="full">Full</option>
-              <option value="custom">Custom</option>
+              <option value="start">Start</option>
+              <option value="pro">Pro</option>
+              <option value="x">X</option>
             </Select>
           </FormControl>
           <FormControl>
@@ -363,7 +380,7 @@ export const InstallOtpManager: FC = () => {
                     Bound IP: {otp.bound_ip || "-"}
                   </Text>
                   <Text fontSize="sm" color="gray.500">
-                    Edition: {otp.edition || "-"}
+                    Edition: {editionLabel(otp.edition)}
                   </Text>
                 {otp.note && (
                     <Text fontSize="sm" color="gray.500">
@@ -431,7 +448,7 @@ export const InstallOtpManager: FC = () => {
                       </Td>
                       <Td>{productLabel(otp.product)}</Td>
                       <Td>{otp.bound_ip || "-"}</Td>
-                      <Td>{otp.edition || "-"}</Td>
+                      <Td>{editionLabel(otp.edition)}</Td>
                       <Td>{formatDateTime(otp.expires_at)}</Td>
                       <Td>{formatDateTime(otp.created_at)}</Td>
                       <Td maxW="360px">

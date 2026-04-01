@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   chakra,
   HStack,
   IconButton,
@@ -11,6 +12,7 @@ import {
   ModalOverlay,
   Text,
   VStack,
+  useBreakpointValue,
 } from "@chakra-ui/react";
 import {
   ChevronLeftIcon,
@@ -18,7 +20,7 @@ import {
   QrCodeIcon,
 } from "@heroicons/react/24/outline";
 import { QRCodeCanvas } from "qrcode.react";
-import { FC, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
@@ -58,7 +60,10 @@ export const QRCodeDialog: FC = () => {
   const { QRcodeLinks, setQRCode, setSubLink, subscribeUrl } = useDashboard();
   const isOpen = QRcodeLinks !== null;
   const [index, setIndex] = useState(0);
+  const sliderRef = useRef<Slider | null>(null);
   const { t } = useTranslation();
+  const isMobile = useBreakpointValue({ base: true, md: false }) ?? true;
+  const qrSize = useBreakpointValue({ base: 220, sm: 248, md: 280, lg: 300 }) ?? 220;
   const onClose = () => {
     setQRCode(null);
     setSubLink(null);
@@ -67,11 +72,23 @@ export const QRCodeDialog: FC = () => {
   const subscribeQrLink = String(subscribeUrl).startsWith("/")
     ? window.location.origin + subscribeUrl
     : String(subscribeUrl);
+  const canSlide = (QRcodeLinks?.length || 0) > 1;
+
+  useEffect(() => {
+    setIndex(0);
+  }, [QRcodeLinks]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
-      <ModalContent mx="3" w="fit-content" maxW="3xl">
+      <ModalContent
+        className="qr-dialog-modal"
+        mx={{ base: 2, md: 3 }}
+        my={{ base: 2, md: 6 }}
+        w={{ base: "calc(100vw - 16px)", md: "fit-content" }}
+        maxW={{ base: "calc(100vw - 16px)", md: "3xl" }}
+        minH={{ base: "calc(100vh - 16px)", md: "auto" }}
+      >
         <ModalHeader pt={6}>
           <Icon color="primary">
             <QRIcon color="white" />
@@ -81,15 +98,15 @@ export const QRCodeDialog: FC = () => {
         {QRcodeLinks && (
           <ModalBody
             gap={{
-              base: "20px",
+              base: "18px",
               lg: "50px",
             }}
-            pr={{
-              lg: "60px",
-            }}
             px={{
-              base: "50px",
+              base: 4,
+              sm: 5,
+              md: 6,
             }}
+            pb={{ base: 5, md: 6 }}
             display="flex"
             justifyContent="center"
             flexDirection={{
@@ -98,28 +115,31 @@ export const QRCodeDialog: FC = () => {
             }}
           >
             {subscribeUrl && (
-              <VStack>
+              <VStack className="qr-dialog-card" spacing={3}>
                 <QRCode
                   mx="auto"
-                  size={300}
+                  size={qrSize}
                   p="2"
                   level={"L"}
                   includeMargin={false}
                   value={subscribeQrLink}
                   bg="white"
                 />
-                <Text display="block" textAlign="center" pb={3} mt={1}>
+                <Text display="block" textAlign="center" pb={1} mt={1} fontSize="sm">
                   {t("qrcodeDialog.sublink")}
                 </Text>
               </VStack>
             )}
-            <Box w="300px">
+            <VStack className="qr-dialog-card qr-dialog-slider-shell" spacing={3}>
+              <Box w="full" maxW={`${qrSize + 24}px`}>
               <Slider
+                ref={sliderRef}
                 centerPadding="0px"
                 centerMode={true}
                 slidesToShow={1}
                 slidesToScroll={1}
                 dots={false}
+                arrows={!isMobile && canSlide}
                 afterChange={setIndex}
                 onInit={() => setIndex(0)}
                 nextArrow={
@@ -149,10 +169,10 @@ export const QRCodeDialog: FC = () => {
               >
                 {QRcodeLinks.map((link, i) => {
                   return (
-                    <HStack key={i}>
+                    <HStack key={i} justifyContent="center">
                       <QRCode
                         mx="auto"
-                        size={300}
+                        size={qrSize}
                         p="2"
                         level={"L"}
                         includeMargin={false}
@@ -163,10 +183,31 @@ export const QRCodeDialog: FC = () => {
                   );
                 })}
               </Slider>
-              <Text display="block" textAlign="center" pb={3} mt={1}>
+              </Box>
+              <Text display="block" textAlign="center" pb={0} mt={1} fontSize="sm">
                 {index + 1} / {QRcodeLinks.length}
               </Text>
-            </Box>
+              {isMobile && canSlide && (
+                <HStack w="full" justifyContent="space-between" spacing={3}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    flex="1"
+                    onClick={() => sliderRef.current?.slickPrev()}
+                  >
+                    {t("previous")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    flex="1"
+                    onClick={() => sliderRef.current?.slickNext()}
+                  >
+                    {t("next")}
+                  </Button>
+                </HStack>
+              )}
+            </VStack>
           </ModalBody>
         )}
       </ModalContent>

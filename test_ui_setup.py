@@ -14,10 +14,10 @@ def test_ui_files():
     print("🎨 Testing UI Files...")
     
     files_to_check = [
-        "/opt/xpert/app/dashboard/src/components/TrafficManager.tsx",
-        "/opt/xpert/app/dashboard/src/pages/TrafficPage.tsx",
-        "/opt/xpert/app/dashboard/src/pages/Router.tsx",
-        "/opt/xpert/app/dashboard/src/components/Header.tsx"
+        "/opt/flew/app/dashboard/src/components/TrafficManager.tsx",
+        "/opt/flew/app/dashboard/src/pages/TrafficPage.tsx",
+        "/opt/flew/app/dashboard/src/pages/Router.tsx",
+        "/opt/flew/app/dashboard/src/components/Header.tsx"
     ]
     
     all_exist = True
@@ -35,7 +35,7 @@ def test_api_endpoints():
     print("\n🔗 Testing API Integration...")
     
     try:
-        from app.xpert.traffic_service import traffic_service
+        from app.flew.traffic_service import traffic_service
         
         # Проверяем методы
         methods = [
@@ -61,7 +61,7 @@ def test_router_config():
     """Проверяем конфигурацию роутера"""
     print("\n🛣️ Testing Router Configuration...")
     
-    router_file = "/opt/xpert/app/dashboard/src/pages/Router.tsx"
+    router_file = "/opt/flew/app/dashboard/src/pages/Router.tsx"
     
     if not os.path.exists(router_file):
         print("❌ Router.tsx not found")
@@ -88,7 +88,7 @@ def test_header_config():
     """Проверяем конфигурацию Header"""
     print("\n📱 Testing Header Configuration...")
     
-    header_file = "/opt/xpert/app/dashboard/src/components/Header.tsx"
+    header_file = "/opt/flew/app/dashboard/src/components/Header.tsx"
     
     if not os.path.exists(header_file):
         print("❌ Header.tsx not found")
@@ -140,7 +140,7 @@ def print_ui_summary():
     print("   • Конфигурация системы")
     
     print("\n🎨 Как использовать:")
-    print("   1. 🔄 Перезапустите Xpert Panel")
+    print("   1. 🔄 Перезапустите Flew Panel")
     print("   2. 🌐 Откройте UI в браузере")
     print("   3. ☰ Нажмите на меню (три полоски)")
     print("   4. 📊 Выберите 'Traffic Manager'")
@@ -149,10 +149,10 @@ def print_ui_summary():
     
     print("\n⚙️ API эндпоинты для UI:")
     endpoints = [
-        "GET /api/xpert/core-traffic-stats",
-        "GET /api/xpert/traffic-stats/database/info", 
-        "GET /api/xpert/traffic-stats/{user_token}",
-        "POST /api/xpert/traffic-stats/cleanup"
+        "GET /api/flew/core-traffic-stats",
+        "GET /api/flew/traffic-stats/database/info", 
+        "GET /api/flew/traffic-stats/{user_token}",
+        "POST /api/flew/traffic-stats/cleanup"
     ]
     
     for endpoint in endpoints:
@@ -160,7 +160,7 @@ def print_ui_summary():
 
 def main():
     """Основная функция тестирования"""
-    print("🚀 Xpert Panel UI Setup Test")
+    print("🚀 Flew Panel UI Setup Test")
     print("=" * 40)
     
     # Тестирование файлов
@@ -189,7 +189,7 @@ def main():
     if ui_ok and api_ok and router_ok and header_ok:
         print("\n🎉 All UI tests passed! Traffic Manager ready!")
         print("\n📝 Next steps:")
-        print("1. 🔄 Перезапустите Xpert Panel")
+        print("1. 🔄 Перезапустите Flew Panel")
         print("2. 🌐 Откройте http://your-domain.com")
         print("3. ☰ Откройте меню и выберите 'Traffic Manager'")
         print("4. 📊 Проверьте что статистика отображается")

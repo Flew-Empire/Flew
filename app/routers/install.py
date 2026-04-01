@@ -16,6 +16,7 @@ from app.utils.install_tokens import (
     create_install_download_token,
     verify_install_download_token,
 )
+from app.utils.edition_names import normalize_edition_name, valid_edition_names
 from config import (
     INSTALL_CLIENT_SCRIPT,
     INSTALL_DOWNLOAD_TOKEN_TTL_SECONDS,
@@ -26,12 +27,12 @@ from config import (
 
 router = APIRouter(tags=["Install"], prefix="/api/install")
 
-_ALLOWED_EDITIONS = {"standard", "full", "custom"}
-_ALLOWED_PRODUCTS = {"xpert", "marzban_patch"}
+_ALLOWED_EDITIONS = valid_edition_names()
+_ALLOWED_PRODUCTS = {"flew", "marzban_patch"}
 
 
 def _normalize_edition(value: str) -> str:
-    return (value or "").strip().lower()
+    return normalize_edition_name(value)
 
 
 def _normalize_product(value: Optional[str]) -> str:
@@ -89,7 +90,7 @@ def _get_release_path(edition: str) -> Tuple[str, str]:
     normalized = _normalize_edition(edition)
     if normalized not in _ALLOWED_EDITIONS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid edition")
-    filename = f"xpert-{normalized}.tar.gz"
+    filename = f"flew-{normalized}.tar.gz"
     path = os.path.join(_resolve_releases_dir(), filename)
     if not os.path.isfile(path):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Release not found")
@@ -181,7 +182,7 @@ def exchange_install_otp(
             detail={"status": "ip_mismatch"},
         )
 
-    otp_product = _normalize_product(getattr(item, "product", None)) or "xpert"
+    otp_product = _normalize_product(getattr(item, "product", None)) or "flew"
     if otp_product not in _ALLOWED_PRODUCTS:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -194,7 +195,7 @@ def exchange_install_otp(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"status": "product_mismatch"},
             )
-    if otp_product != "xpert":
+    if otp_product != "flew":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"status": "product_mismatch"},
@@ -259,7 +260,7 @@ def exchange_marzban_patch_otp(
             detail={"status": "ip_mismatch"},
         )
 
-    otp_product = _normalize_product(getattr(item, "product", None)) or "xpert"
+    otp_product = _normalize_product(getattr(item, "product", None)) or "flew"
     if otp_product not in _ALLOWED_PRODUCTS:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -325,8 +326,8 @@ def download_release(
     if not payload:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
 
-    product = _normalize_product(payload.get("product")) or "xpert"
-    if product != "xpert":
+    product = _normalize_product(payload.get("product")) or "flew"
+    if product != "flew":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
 
     edition = payload.get("edition") or ""
@@ -350,7 +351,7 @@ def download_marzban_patch(
     if not payload:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
 
-    product = _normalize_product(payload.get("product")) or "xpert"
+    product = _normalize_product(payload.get("product")) or "flew"
     if product != "marzban_patch":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
 

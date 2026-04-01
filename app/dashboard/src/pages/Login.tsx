@@ -9,6 +9,7 @@ import {
   FormLabel,
   HStack,
   Text,
+  useColorModeValue,
   VStack,
 } from "@chakra-ui/react";
 import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
@@ -20,8 +21,9 @@ import { z } from "zod";
 import { Footer } from "components/Footer";
 import { Input } from "components/Input";
 import { fetch } from "service/http";
-import { removeAuthToken, setAuthToken } from "utils/authStorage";
+import { setAuthToken } from "utils/authStorage";
 import { ReactComponent as Logo } from "assets/logo.svg";
+import LoginLightLogo from "assets/login-light-logo.svg";
 import { useTranslation } from "react-i18next";
 import { Language } from "components/Language";
 
@@ -33,8 +35,8 @@ const schema = z.object({
 export const LogoIcon = chakra(Logo, {
   baseStyle: {
     strokeWidth: "10px",
-    w: 12,
-    h: 12,
+    w: 16,
+    h: 16,
   },
 });
 
@@ -72,6 +74,7 @@ export const Login: FC = () => {
   const captchaContainerId = "login-captcha";
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const isLightTheme = useColorModeValue(true, false);
   let location = useLocation();
   const {
     register,
@@ -81,11 +84,10 @@ export const Login: FC = () => {
     resolver: zodResolver(schema),
   });
   useEffect(() => {
-    removeAuthToken();
-    if (location.pathname !== "/login") {
-      navigate("/login", { replace: true });
+    if (location.pathname !== "/login" && location.pathname !== "/login/") {
+      navigate("/login/", { replace: true });
     }
-  }, []);
+  }, [location.pathname, navigate]);
 
   const loadCaptchaScript = (vendor: string) => {
     const lower = (vendor || "turnstile").toLowerCase();
@@ -213,7 +215,19 @@ export const Login: FC = () => {
         <HStack w="full" justifyContent="center" alignItems="center">
           <Box w="full" maxW="340px" mt="6">
             <VStack alignItems="center" w="full">
-              <LogoIcon />
+              {isLightTheme ? (
+                <Box
+                  as="img"
+                  src={LoginLightLogo}
+                  alt="Flew logo"
+                  h="64px"
+                  w="auto"
+                  maxW="88px"
+                  objectFit="contain"
+                />
+              ) : (
+                <LogoIcon />
+              )}
               <Text fontSize="2xl" fontWeight="semibold">
                 {t("login.loginYourAccount")}
               </Text>
@@ -267,9 +281,16 @@ export const Login: FC = () => {
                     isLoading={loading}
                     type="submit"
                     w="full"
-                    colorScheme="primary"
+                    borderWidth="1px"
+                    _hover={{
+                      transform: "none",
+                    }}
+                    _active={{
+                      transform: "none",
+                    }}
+                    leftIcon={<LoginIcon />}
+                    className="login-submit-btn"
                   >
-                    {<LoginIcon marginRight={1} />}
                     {t("login")}
                   </Button>
                 </VStack>

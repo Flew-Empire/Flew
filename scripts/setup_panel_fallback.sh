@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DOMAIN=""
-INSTALL_DIR="/opt/xpert"
+INSTALL_DIR="/opt/flew"
 NGINX_PORT=8443
 XRAY_PORT=443
 
@@ -11,11 +11,11 @@ usage() {
 Configure Xray TLS fallback on 443 and local-only nginx for the panel.
 
 Usage:
-  setup_panel_fallback.sh --domain panel.example.com [--install-dir /opt/xpert]
+  setup_panel_fallback.sh --domain panel.example.com [--install-dir /opt/flew]
 
 Options:
   --domain       Panel domain (required)
-  --install-dir  Xpert install directory (default: /opt/xpert)
+  --install-dir  Flew install directory (default: /opt/flew)
   --nginx-port   Local nginx port (default: 8443)
   --xray-port    Public xray port (default: 443)
 USAGE
@@ -82,7 +82,7 @@ fi
 
 mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 
-cat > /etc/nginx/sites-available/xpert_panel <<EOF
+cat > /etc/nginx/sites-available/flew_panel <<EOF
 server {
     listen 127.0.0.1:${NGINX_PORT} proxy_protocol;
     listen [::1]:${NGINX_PORT} proxy_protocol;
@@ -141,7 +141,7 @@ server {
 }
 EOF
 
-ln -sfn /etc/nginx/sites-available/xpert_panel /etc/nginx/sites-enabled/xpert_panel
+ln -sfn /etc/nginx/sites-available/flew_panel /etc/nginx/sites-enabled/flew_panel
 
 if [ -f /etc/nginx/sites-enabled/default ]; then
   mv /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default.disabled
@@ -168,7 +168,7 @@ with open(path, "r", encoding="utf-8") as f:
     data = json.load(f)
 
 inbounds = data.get("inbounds", [])
-tag = "XPERT_TLS_FALLBACK"
+tag = "FLEW_TLS_FALLBACK"
 inbound = next((item for item in inbounds if item.get("tag") == tag), None)
 
 if inbound is None:

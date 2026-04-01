@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Простое тестирование системы мониторинга трафика Xpert Panel
+Простое тестирование системы мониторинга трафика Flew Panel
 """
 
 import sys
@@ -10,7 +10,7 @@ from datetime import datetime
 # Добавляем путь к app
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.xpert.traffic_service import traffic_service
+from app.flew.traffic_service import traffic_service
 
 
 def test_traffic_service():
@@ -105,7 +105,7 @@ def print_usage_examples():
     print("=" * 60)
     
     print("\n1. 📡 Webhook вызов от клиента:")
-    print("   POST /api/xpert/traffic-webhook")
+    print("   POST /api/flew/traffic-webhook")
     print("   Content-Type: application/json")
     print("   Body:")
     webhook_example = """   {
@@ -119,30 +119,30 @@ def print_usage_examples():
     print(webhook_example)
     
     print("\n2. 👤 Статистика пользователя:")
-    print("   GET /api/xpert/traffic-stats/user123?days=30")
+    print("   GET /api/flew/traffic-stats/user123?days=30")
     print("   Returns: traffic by servers, GB used, connection count")
     
     print("\n3. 🌍 Глобальная статистика:")
-    print("   GET /api/xpert/traffic-stats/global?days=30")
+    print("   GET /api/flew/traffic-stats/global?days=30")
     print("   Returns: total users, servers, GB used, top servers")
     
-    print("\n4. 🖥️ Статистика для Xpert Core UI:")
-    print("   GET /api/xpert/core-traffic-stats?days=30")
-    print("   Returns: Xpert Core-compatible format with external_servers=true")
+    print("\n4. 🖥️ Статистика для Flew Core UI:")
+    print("   GET /api/flew/core-traffic-stats?days=30")
+    print("   Returns: Flew Core-compatible format with external_servers=true")
     
     print("\n5. 🗂️ Очистка старой статистики:")
-    print("   POST /api/xpert/traffic-stats/cleanup?days=90")
+    print("   POST /api/flew/traffic-stats/cleanup?days=90")
     print("   Deletes records older than specified days")
     
     print("\n6. 📱 Подписка с отслеживанием:")
-    print("   GET /api/xpert/sub?user_token=user123")
+    print("   GET /api/flew/sub?user_token=user123")
     print("   Headers returned:")
-    print("   - Traffic-Webhook: https://domain.com/api/xpert/traffic-webhook")
+    print("   - Traffic-Webhook: https://domain.com/api/flew/traffic-webhook")
     print("   - User-Token: user123")
     print("   - Subscription-Userinfo: upload=X; download=Y; total=Z; expire=0")
     
     print("\n7. 📊 Информация о базе данных:")
-    print("   GET /api/xpert/traffic-stats/database/info")
+    print("   GET /api/flew/traffic-stats/database/info")
     print("   Returns: DB size, records count, retention settings")
 
 
@@ -156,14 +156,14 @@ def print_integration_notes():
     print("   • Middleware for subscription request tracking")
     print("   • Webhook API for traffic data collection")
     print("   • User and global statistics")
-    print("   • Xpert Core UI integration endpoint")
+    print("   • Flew Core UI integration endpoint")
     print("   • Database cleanup functionality")
     print("   • Configuration-based enable/disable")
     
     print("\n🔧 Configuration variables (.env):")
-    print("   XPERT_TRAFFIC_TRACKING_ENABLED=True")
-    print("   XPERT_TRAFFIC_DB_PATH=data/traffic_stats.db")
-    print("   XPERT_TRAFFIC_RETENTION_DAYS=0  # 0 = infinite")
+    print("   FLEW_TRAFFIC_TRACKING_ENABLED=True")
+    print("   FLEW_TRAFFIC_DB_PATH=data/traffic_stats.db")
+    print("   FLEW_TRAFFIC_RETENTION_DAYS=0  # 0 = infinite")
     
     print("\n📈 Traffic flow:")
     print("   1. Client requests subscription with user_token")
@@ -171,7 +171,7 @@ def print_integration_notes():
     print("   3. Client sends traffic data to webhook")
     print("   4. Traffic stored in SQLite database")
     print("   5. Statistics available via API")
-    print("   6. Xpert Core UI can fetch external server stats")
+    print("   6. Flew Core UI can fetch external server stats")
     
     print("\n⚡ Performance considerations:")
     print("   • Minimal middleware overhead")
@@ -182,7 +182,7 @@ def print_integration_notes():
 
 def main():
     """Основная функция тестирования"""
-    print("🚀 Xpert Panel Traffic Monitoring System Test")
+    print("🚀 Flew Panel Traffic Monitoring System Test")
     print("=" * 50)
     
     # Тестирование сервиса
@@ -202,10 +202,10 @@ def main():
     
     print("\n🎯 System ready for production!")
     print("\n📝 Next steps:")
-    print("1. 🔄 Restart Xpert Panel to load new middleware")
+    print("1. 🔄 Restart Flew Panel to load new middleware")
     print("2. 🧪 Test subscription URLs with tracking")
     print("3. 📱 Implement client-side webhook calls")
-    print("4. 🖥️ Add traffic stats to Xpert Core UI")
+    print("4. 🖥️ Add traffic stats to Flew Core UI")
     print("5. 📊 Monitor external server usage")
 
 

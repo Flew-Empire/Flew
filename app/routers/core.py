@@ -119,10 +119,17 @@ def restart_core(admin: Admin = Depends(Admin.check_sudo_admin)):
 
 
 @router.get("/core/config", responses={403: responses._403})
-def get_core_config(admin: Admin = Depends(Admin.check_sudo_admin)) -> dict:
-    """Get the current core configuration."""
+def get_core_config(admin: Admin = Depends(Admin.get_current)) -> dict:
+    """Get the current core configuration.
+
+    Non-sudo admins only need inbound metadata for the user editor, so we expose
+    a minimal read-only payload instead of the full Xray config.
+    """
     with open(XRAY_JSON, "r") as f:
         config = commentjson.loads(f.read())
+
+    if not admin.is_sudo:
+        return {"inbounds": config.get("inbounds", [])}
 
     return config
 

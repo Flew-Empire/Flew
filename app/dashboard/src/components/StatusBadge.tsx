@@ -11,6 +11,7 @@ type UserStatusProps = {
   status: UserStatusType;
   compact?: boolean;
   showDetail?: boolean;
+  showExpiryInfo?: boolean;
   extraText?: string | null;
 };
 export const StatusBadge: FC<UserStatusProps> = ({
@@ -18,6 +19,7 @@ export const StatusBadge: FC<UserStatusProps> = ({
   status: userStatus,
   compact = false,
   showDetail = true,
+  showExpiryInfo = true,
   extraText,
 }) => {
   const { t } = useTranslation();
@@ -67,7 +69,7 @@ export const StatusBadge: FC<UserStatusProps> = ({
           </Text>
         )}
       </Badge>
-      {showDetail && expiryDate && (
+      {showDetail && showExpiryInfo && expiryDate && (
         <Text
           display="inline-block"
           fontSize="xs"

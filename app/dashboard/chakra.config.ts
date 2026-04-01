@@ -30,23 +30,18 @@ export const theme = extendTheme({
         "--lg-edge-soft": "rgba(191,219,254,0.18)",
       },
       body: {
-        bg: "#8a8a8a",
-        backgroundImage: "linear-gradient(135deg, #7a7a8a 0%, #8a8a8a 50%, #7a8090 100%)",
+        bg: "transparent",
+        backgroundImage: "none",
         backgroundAttachment: "fixed",
-        _dark: {
-          bg: "#1a1a2e",
-          backgroundImage: "linear-gradient(135deg, #16213e 0%, #1a1a2e 50%, #0f3460 100%)",
-          backgroundAttachment: "fixed",
-        },
+        color: "var(--text)",
       },
-        ".chakra-card, .chakra-modal__content, .chakra-drawer__content, .chakra-menu__menu-list, .chakra-alert": {
-        _dark: {
-          position: "relative",
-          overflow: "hidden",
-          isolation: "isolate",
-          borderColor: "rgba(191, 219, 254, 0.28) !important",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(148,163,184,0.12), 0 8px 32px rgba(0,0,0,0.22)",
-        },
+      ".chakra-card, .chakra-modal__content, .chakra-drawer__content, .chakra-menu__menu-list, .chakra-alert": {
+        position: "relative",
+        overflow: "hidden",
+        isolation: "isolate",
+        borderColor: "var(--border) !important",
+        boxShadow: "var(--panel-shadow)",
+        bg: "var(--surface-elevated)",
       },
       ".chakra-card::before, .chakra-modal__content::before, .chakra-drawer__content::before, .chakra-menu__menu-list::before, .chakra-alert::before": {
         content: '""',
@@ -73,14 +68,10 @@ export const theme = extendTheme({
         boxShadow: "inset 1px 1px 0 rgba(255,255,255,0.18), inset -1px -1px 0 rgba(148,163,184,0.15), inset 0 0 6px rgba(255,255,255,0.10)",
       },
       ".chakra-button, .chakra-input, .chakra-select, .chakra-textarea": {
-        _dark: {
-          position: "relative",
-          overflow: "hidden",
-          isolation: "isolate",
-          borderColor: "rgba(191, 219, 254, 0.28) !important",
-          boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(148,163,184,0.12)",
-        },
+        position: "relative",
+        overflow: "hidden",
+        isolation: "isolate",
+        borderColor: "var(--border) !important",
       },
       ".chakra-button::after, .chakra-input::after, .chakra-select::after, .chakra-textarea::after": {
         content: '""',
@@ -181,74 +172,55 @@ export const theme = extendTheme({
   components: {
     Button: {
       baseStyle: {
-        _dark: {
-          bg: "rgba(23, 28, 52, 0.42)",
-          color: "#dbe7ff",
-          border: "1px solid rgba(191, 219, 254, 0.3)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(148,163,184,0.10), 0 8px 24px rgba(0,0,0,0.22)",
-          transition: "all .2s ease",
-          _hover: {
-            bg: "rgba(30, 37, 67, 0.52)",
-            borderColor: "rgba(96, 165, 250, 0.42)",
-            boxShadow:
-              "inset 0 1px 0 rgba(255,255,255,0.24), 0 0 14px rgba(77,99,255,0.24)",
-          },
-          _active: {
-            bg: "rgba(36, 43, 78, 0.58)",
-          },
+        borderRadius: "14px",
+        transition: "all .2s ease",
+        _focusVisible: {
+          boxShadow: "0 0 0 1px var(--blue)",
         },
       },
     },
     Card: {
       baseStyle: {
         container: {
-          _dark: {
-            bg: "rgba(15, 20, 40, 0.46)",
-            border: "1px solid rgba(191, 219, 254, 0.28)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(148,163,184,0.10), 0 8px 28px rgba(0,0,0,0.22)",
-          },
+          bg: "var(--surface-elevated)",
+          border: "1px solid var(--border)",
+          borderRadius: "18px",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          boxShadow: "var(--panel-shadow)",
         },
       },
     },
     Alert: {
       baseStyle: {
         container: {
-          borderRadius: "6px",
+          borderRadius: "14px",
           fontSize: "sm",
-          bg: "var(--chakra-alert-bg)",
-          color: "var(--chakra-alert-fg)",
-          _dark: {
-            border: "1px solid rgba(191, 219, 254, 0.28)",
-            backdropFilter: "blur(14px)",
-            WebkitBackdropFilter: "blur(14px)",
-          },
+          bg: "var(--surface-elevated)",
+          color: "var(--text)",
+          border: "1px solid var(--border)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
         },
       },
     },
     Menu: {
       baseStyle: {
         list: {
-          _dark: {
-            bg: "rgba(11, 16, 31, 0.74)",
-            borderColor: "rgba(191, 219, 254, 0.3)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(148,163,184,0.10), 0 8px 28px rgba(0,0,0,0.22)",
-          },
+          bg: "var(--surface-elevated)",
+          borderColor: "var(--border)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          boxShadow: "var(--panel-shadow)",
         },
         item: {
-          _dark: {
-            bg: "transparent",
-            _hover: {
-              bg: "rgba(77, 99, 255, 0.18)",
-            },
-            _focus: {
-              bg: "rgba(77, 99, 255, 0.2)",
-            },
+          bg: "transparent",
+          color: "var(--text)",
+          _hover: {
+            bg: "var(--hover)",
+          },
+          _focus: {
+            bg: "var(--hover)",
           },
         },
       },
@@ -256,40 +228,32 @@ export const theme = extendTheme({
     Modal: {
       baseStyle: {
         dialog: {
-          _dark: {
-            bg: "rgba(11, 16, 31, 0.74)",
-            border: "1px solid rgba(191, 219, 254, 0.3)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-          },
+          bg: "var(--surface-elevated)",
+          border: "1px solid var(--border)",
+          borderRadius: "24px",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
         },
       },
     },
     Drawer: {
       baseStyle: {
         dialog: {
-          _dark: {
-            bg: "rgba(11, 16, 31, 0.74)",
-            borderLeft: "1px solid rgba(191, 219, 254, 0.3)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-          },
+          bg: "var(--surface-elevated)",
+          borderLeft: "1px solid var(--border)",
+          borderRadius: "24px",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
         },
       },
     },
     Select: {
       baseStyle: {
         field: {
-          _dark: {
-            borderRadius: "6px",
-            bg: "rgba(19, 24, 45, 0.5)",
-            borderColor: "rgba(148, 163, 184, 0.5)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-          },
-          _light: {
-            borderRadius: "6px",
-          },
+          borderRadius: "14px",
+          bg: "var(--input-bg)",
+          borderColor: "var(--border)",
+          color: "var(--text)",
         },
       },
     },
@@ -303,95 +267,64 @@ export const theme = extendTheme({
         fontSize: "sm",
         fontWeight: "medium",
         mb: "1",
-        _dark: { color: "gray.300" },
+        color: "var(--muted)",
       },
     },
     Input: {
       baseStyle: {
         addon: {
-          _dark: {
-            borderColor: "gray.600",
-            _placeholder: {
-              color: "gray.500",
-            },
-          },
+          borderColor: "var(--border)",
+          bg: "var(--input-bg)",
+          color: "var(--text)",
         },
         field: {
+          borderRadius: "14px",
+          bg: "var(--input-bg)",
+          borderColor: "var(--border)",
+          color: "var(--text)",
           _focusVisible: {
             boxShadow: "none",
-            borderColor: "primary.200",
-            outlineColor: "primary.200",
-          },
-          _dark: {
-            borderColor: "gray.600",
-            bg: "rgba(19, 24, 45, 0.5)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            _disabled: {
-              color: "gray.400",
-              borderColor: "gray.500",
-            },
-            _placeholder: {
-              color: "gray.500",
-            },
+            borderColor: "var(--blue)",
+            outlineColor: "var(--blue)",
           },
         },
       },
     },
     Textarea: {
       baseStyle: {
+        borderRadius: "14px",
+        bg: "var(--input-bg)",
+        borderColor: "var(--border)",
+        color: "var(--text)",
         _focusVisible: {
           boxShadow: "none",
-          borderColor: "primary.200",
-          outlineColor: "primary.200",
-        },
-        _dark: {
-          borderColor: "gray.600",
-          bg: "rgba(19, 24, 45, 0.5)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          _disabled: {
-            color: "gray.400",
-            borderColor: "gray.500",
-          },
-          _placeholder: {
-            color: "gray.500",
-          },
+          borderColor: "var(--blue)",
+          outlineColor: "var(--blue)",
         },
       },
     },
     NumberInput: {
       baseStyle: {
         field: {
+          borderRadius: "14px",
+          bg: "var(--input-bg)",
+          borderColor: "var(--border)",
+          color: "var(--text)",
           _focusVisible: {
             boxShadow: "none",
-            borderColor: "primary.200",
-            outlineColor: "primary.200",
-          },
-          _dark: {
-            borderColor: "gray.600",
-            bg: "rgba(19, 24, 45, 0.5)",
-            color: "#dbe7ff",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            _placeholder: {
-              color: "gray.500",
-            },
+            borderColor: "var(--blue)",
+            outlineColor: "var(--blue)",
           },
         },
         stepperGroup: {
-          _dark: {
-            bg: "rgba(19, 24, 45, 0.35)",
-            borderColor: "rgba(148, 163, 184, 0.45)",
-          },
+          bg: "var(--surface-soft)",
+          borderColor: "var(--border)",
         },
         stepper: {
-          _dark: {
-            borderColor: "rgba(148, 163, 184, 0.35)",
-            color: "#dbe7ff",
-            _hover: {
-              bg: "rgba(77, 99, 255, 0.18)",
-            },
+          borderColor: "var(--border)",
+          color: "var(--text)",
+          _hover: {
+            bg: "var(--hover)",
           },
         },
       },
@@ -406,45 +339,33 @@ export const theme = extendTheme({
           borderBottomColor: "light-border",
         },
         th: {
-          background: "#F9FAFB",
-          borderColor: "light-border !important",
-          borderBottomColor: "light-border !important",
-          borderTop: "1px solid ",
-          borderTopColor: "light-border !important",
+          background: "var(--surface-soft)",
+          borderColor: "var(--divider) !important",
+          borderBottomColor: "var(--divider) !important",
+          borderTop: "0px solid",
+          borderTopColor: "transparent !important",
+          color: "var(--muted)",
           _first: {
-            borderLeft: "1px solid",
-            borderColor: "light-border !important",
+            borderLeft: "0px solid",
+            borderColor: "transparent !important",
           },
           _last: {
-            borderRight: "1px solid",
-            borderColor: "light-border !important",
-          },
-          _dark: {
-            borderColor: "gray.600 !important",
-            background: "gray.750",
+            borderRight: "0px solid",
+            borderColor: "transparent !important",
           },
         },
         td: {
           transition: "all .1s ease-out",
-          borderColor: "light-border",
-          borderBottomColor: "light-border !important",
+          borderColor: "var(--divider)",
+          borderBottomColor: "var(--divider) !important",
+          color: "var(--text)",
           _first: {
-            borderLeft: "1px solid",
-            borderColor: "light-border",
-            _dark: {
-              borderColor: "gray.600",
-            },
+            borderLeft: "0px solid",
+            borderColor: "transparent",
           },
           _last: {
-            borderRight: "1px solid",
-            borderColor: "light-border",
-            _dark: {
-              borderColor: "gray.600",
-            },
-          },
-          _dark: {
-            borderColor: "gray.600",
-            borderBottomColor: "gray.600 !important",
+            borderRight: "0px solid",
+            borderColor: "transparent",
           },
         },
         tr: {
@@ -452,13 +373,8 @@ export const theme = extendTheme({
             cursor: "pointer",
             _hover: {
               "& > td": {
-                bg: "gray.200",
-              },
-              _dark: {
-                "& > td": {
-                  bg: "rgba(37, 55, 112, 0.34)",
-                  boxShadow: "none",
-                },
+                bg: "var(--hover)",
+                boxShadow: "none",
               },
             },
           },
@@ -475,5 +391,9 @@ export const theme = extendTheme({
         },
       },
     },
+  },
+  config: {
+    initialColorMode: "dark",
+    useSystemColorMode: false,
   },
 });

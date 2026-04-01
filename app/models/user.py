@@ -12,10 +12,10 @@ from app.models.admin import Admin
 from app.models.proxy import ProxySettings, ProxyTypes
 from app.subscription.share import generate_v2ray_links
 from app.utils.features import feature_enabled
-from app.utils.jwt import create_subscription_token
-from app.xpert.happ_crypto_auto_service import get_cached_or_create_happ_crypto_link
-from app.xpert.hwid_lock_service import has_hwid_protection
-from app.xpert.v2box_hwid_service import get_required_v2box_device_id_for_username
+from app.utils.jwt import create_subscription_opaque_token
+from app.flew.happ_crypto_auto_service import get_cached_or_create_happ_crypto_link
+from app.flew.hwid_lock_service import has_hwid_protection
+from app.flew.v2box_hwid_service import get_required_v2box_device_id_for_username
 from config import XRAY_SUBSCRIPTION_PATH, XRAY_SUBSCRIPTION_URL_PREFIX
 
 USERNAME_REGEXP = re.compile(r"^(?=\w{3,32}\b)[a-zA-Z0-9-_@.]+(?:_[a-zA-Z0-9-_@.]+)*$")
@@ -316,12 +316,8 @@ class UserResponse(User):
             if self.admin and hasattr(self.admin, 'subscription_url_prefix'):
                 admin_prefix = self.admin.subscription_url_prefix
             url_prefix = (admin_prefix or XRAY_SUBSCRIPTION_URL_PREFIX).replace('*', salt).strip("/")
-            token = create_subscription_token(self.username)
+            token = create_subscription_opaque_token(self.username)
             self.subscription_url = f"{url_prefix}/{XRAY_SUBSCRIPTION_PATH}/{token}"
-        # Force v2ray format for all subscriptions
-        if self.subscription_url and not self.subscription_url.endswith("/v2ray"):
-            self.subscription_url = self.subscription_url.rstrip("/") + "/v2ray"
-
         # Keep all optional query flags in one place to avoid duplicated/invalid URLs.
         try:
             parts = urlsplit(self.subscription_url)

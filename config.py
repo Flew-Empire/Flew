@@ -2,6 +2,7 @@ import os
 
 from decouple import config
 from dotenv import load_dotenv
+from app.utils.edition_names import normalize_edition_name
 
 load_dotenv()
 
@@ -30,6 +31,9 @@ VITE_BASE_API = f"http://127.0.0.1:{UVICORN_PORT}/api/" \
 XRAY_JSON = config("XRAY_JSON", default="./xray_config.json")
 if XRAY_JSON and not os.path.isabs(XRAY_JSON):
     XRAY_JSON = os.path.abspath(os.path.join(os.path.dirname(__file__), XRAY_JSON))
+XRAY_RUNTIME_JSON = config("XRAY_RUNTIME_JSON", default="/usr/local/etc/xray/config.json")
+if XRAY_RUNTIME_JSON and not os.path.isabs(XRAY_RUNTIME_JSON):
+    XRAY_RUNTIME_JSON = os.path.abspath(os.path.join(os.path.dirname(__file__), XRAY_RUNTIME_JSON))
 XRAY_FALLBACKS_INBOUND_TAG = config("XRAY_FALLBACKS_INBOUND_TAG", cast=str, default="") or config(
     "XRAY_FALLBACK_INBOUND_TAG", cast=str, default=""
 )
@@ -147,7 +151,7 @@ DISABLE_RECORDING_NODE_USAGE = config("DISABLE_RECORDING_NODE_USAGE", cast=bool,
 # headers: profile-update-interval, support-url, profile-title
 SUB_UPDATE_INTERVAL = config("SUB_UPDATE_INTERVAL", default="12")
 SUB_SUPPORT_URL = config("SUB_SUPPORT_URL", default="https://t.me/")
-SUB_PROFILE_TITLE = config("SUB_PROFILE_TITLE", default="Subscription")
+SUB_PROFILE_TITLE = config("SUB_PROFILE_TITLE", default="Flew")
 
 # discord webhook log
 DISCORD_WEBHOOK_URL = config("DISCORD_WEBHOOK_URL", default="")
@@ -161,31 +165,44 @@ JOB_REVIEW_USERS_INTERVAL = config("JOB_REVIEW_USERS_INTERVAL", cast=int, defaul
 JOB_SEND_NOTIFICATIONS_INTERVAL = config("JOB_SEND_NOTIFICATIONS_INTERVAL", cast=int, default=30)
 
 # ============================================
-# XPERT PANEL - Subscription Aggregation
+# FLEW PANEL - Subscription Aggregation
 # ============================================
-XPERT_DOMAIN = config("XPERT_DOMAIN", default="home.turkmendili.ru")
-XPERT_TARGET_CHECK_IPS = config("XPERT_TARGET_CHECK_IPS", default="93.171.220.198,185.69.186.175").split(",")
-XPERT_MAX_PING_MS = config("XPERT_MAX_PING_MS", cast=int, default=300)
-XPERT_UPDATE_INTERVAL_HOURS = config("XPERT_UPDATE_INTERVAL_HOURS", cast=int, default=1)
-XPERT_REDIS_URL = config("XPERT_REDIS_URL", default="")
-XPERT_REQUIRE_ACTIVE_STATUS = config("XPERT_REQUIRE_ACTIVE_STATUS", cast=bool, default=True)
-XPERT_USE_DYNAMIC_FILTERING = config("XPERT_USE_DYNAMIC_FILTERING", cast=bool, default=True)
-XPERT_MIN_USERS_FOR_STATS = config("XPERT_MIN_USERS_FOR_STATS", cast=int, default=3)
-XPERT_TOP_SERVERS_LIMIT = config("XPERT_TOP_SERVERS_LIMIT", cast=int, default=1000)  # Убираем лимит
-XPERT_USE_COUNTRY_FLAGS = config("XPERT_USE_COUNTRY_FLAGS", cast=bool, default=True)
+FLEW_DOMAIN = config("FLEW_DOMAIN", default="home.turkmendili.ru")
+FLEW_TARGET_CHECK_IPS = config("FLEW_TARGET_CHECK_IPS", default="93.171.220.198,185.69.186.175").split(",")
+FLEW_MAX_PING_MS = config("FLEW_MAX_PING_MS", cast=int, default=300)
+FLEW_UPDATE_INTERVAL_HOURS = config("FLEW_UPDATE_INTERVAL_HOURS", cast=int, default=1)
+FLEW_REDIS_URL = config("FLEW_REDIS_URL", default="")
+FLEW_REQUIRE_ACTIVE_STATUS = config("FLEW_REQUIRE_ACTIVE_STATUS", cast=bool, default=True)
+FLEW_USE_DYNAMIC_FILTERING = config("FLEW_USE_DYNAMIC_FILTERING", cast=bool, default=True)
+FLEW_MIN_USERS_FOR_STATS = config("FLEW_MIN_USERS_FOR_STATS", cast=int, default=3)
+FLEW_TOP_SERVERS_LIMIT = config("FLEW_TOP_SERVERS_LIMIT", cast=int, default=1000)  # Убираем лимит
+FLEW_USE_COUNTRY_FLAGS = config("FLEW_USE_COUNTRY_FLAGS", cast=bool, default=True)
 JOB_SUBSCRIPTION_AGGREGATION_INTERVAL = config("JOB_SUBSCRIPTION_AGGREGATION_INTERVAL", cast=int, default=3600)
-XPERT_TRAFFIC_TRACKING_ENABLED = config("XPERT_TRAFFIC_TRACKING_ENABLED", cast=bool, default=True)
-XPERT_TRAFFIC_DB_PATH = config("XPERT_TRAFFIC_DB_PATH", default="data/traffic_stats.db")
-XPERT_TRAFFIC_RETENTION_DAYS = config("XPERT_TRAFFIC_RETENTION_DAYS", cast=int, default=0)
-XPERT_IP_ROTATION_WINDOW_SECONDS = config("XPERT_IP_ROTATION_WINDOW_SECONDS", cast=int, default=0)
+FLEW_TRAFFIC_TRACKING_ENABLED = config("FLEW_TRAFFIC_TRACKING_ENABLED", cast=bool, default=True)
+FLEW_TRAFFIC_DB_PATH = config("FLEW_TRAFFIC_DB_PATH", default="data/traffic_stats.db")
+FLEW_TRAFFIC_RETENTION_DAYS = config("FLEW_TRAFFIC_RETENTION_DAYS", cast=int, default=0)
+FLEW_IP_ROTATION_WINDOW_SECONDS = config("FLEW_IP_ROTATION_WINDOW_SECONDS", cast=int, default=0)
 
 # ============================================
 # XPANEL - Editions / Features / Releases
 # ============================================
-XPERT_EDITION = config("XPERT_EDITION", default="custom").strip().lower()
-XPERT_FEATURES = [
+FLEW_EDITION = normalize_edition_name(
+    config("FLEW_EDITION", default="x"), default="x"
+)
+FLEW_FEATURES = [
     item.strip().lower()
-    for item in config("XPERT_FEATURES", default="").split(",")
+    for item in config("FLEW_FEATURES", default="").split(",")
+    if item.strip()
+]
+ADMIN_CHAT_MAIN_ADMIN = config("ADMIN_CHAT_MAIN_ADMIN", default="moor").strip().lower()
+ADMIN_CHAT_LOCKED_SUDOERS = [
+    item.strip().lower()
+    for item in config("ADMIN_CHAT_LOCKED_SUDOERS", default="arslan").split(",")
+    if item.strip()
+]
+INSTALL_OTP_ALLOWED_ADMINS = [
+    item.strip().lower()
+    for item in config("INSTALL_OTP_ALLOWED_ADMINS", default="moor").split(",")
     if item.strip()
 ]
 _XPANEL_ENABLED_RAW = config("XPANEL_ENABLED", default="").strip()

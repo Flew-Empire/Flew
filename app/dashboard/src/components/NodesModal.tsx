@@ -5,7 +5,6 @@ import {
   AccordionItem,
   AccordionPanel,
   Alert,
-  AlertDescription,
   AlertIcon,
   Badge,
   Box,
@@ -24,9 +23,11 @@ import {
   ModalContent,
   ModalHeader,
   ModalOverlay,
+  SimpleGrid,
   Switch,
   Text,
   Tooltip,
+  useBreakpointValue,
   useToast,
   VStack,
 } from "@chakra-ui/react";
@@ -45,7 +46,7 @@ import {
   useNodes,
   useNodesQuery,
 } from "contexts/NodesContext";
-import { FC, ReactNode, useState } from "react";
+import { FC, ReactNode, useEffect, useState } from "react";
 import { Controller, useForm, UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import {
@@ -138,15 +139,28 @@ const NodeAccordion: FC<AccordionInboundType> = ({ toggleAccordion, node }) => {
 
   return (
     <AccordionItem
+      className="nodes-accordion-item"
       border="1px solid"
       _dark={{ borderColor: "gray.600" }}
       _light={{ borderColor: "gray.200" }}
-      borderRadius="4px"
+      borderRadius="14px"
       p={1}
       w="full"
     >
-      <AccordionButton px={2} borderRadius="3px" onClick={toggleAccordion}>
-        <HStack w="full" justifyContent="space-between" pr={2}>
+      <AccordionButton
+        className="nodes-accordion-button"
+        px={2}
+        borderRadius="12px"
+        onClick={toggleAccordion}
+      >
+        <HStack
+          w="full"
+          justifyContent="space-between"
+          pr={2}
+          flexWrap="wrap"
+          alignItems={{ base: "flex-start", sm: "center" }}
+          rowGap={2}
+        >
           <Text
             as="span"
             fontWeight="medium"
@@ -155,10 +169,11 @@ const NodeAccordion: FC<AccordionInboundType> = ({ toggleAccordion, node }) => {
             textAlign="left"
             color="gray.700"
             _dark={{ color: "gray.300" }}
+            minW={0}
           >
             {node.name}
           </Text>
-          <HStack>
+          <HStack flexWrap="wrap" justifyContent="flex-start">
             {node.xray_version && (
               <Badge
                 colorScheme="blue"
@@ -182,7 +197,7 @@ const NodeAccordion: FC<AccordionInboundType> = ({ toggleAccordion, node }) => {
         </HStack>
         <AccordionIcon />
       </AccordionButton>
-      <AccordionPanel px={2} pb={2}>
+      <AccordionPanel className="nodes-accordion-panel" px={2} pb={2}>
         <VStack pb={3} alignItems="flex-start">
           {nodeStatus === "error" && (
             <Alert status="error" size="xs">
@@ -213,6 +228,10 @@ const NodeAccordion: FC<AccordionInboundType> = ({ toggleAccordion, node }) => {
           mutate={mutate}
           isLoading={isLoading}
           submitBtnText={t("nodes.editNode")}
+          btnProps={{
+            variant: "solid",
+            className: "dashboard-accent-btn nodes-submit-btn nodes-compact-submit",
+          }}
           btnLeftAdornment={
             <Tooltip label={t("delete")} placement="top">
               <IconButton
@@ -268,6 +287,7 @@ const AddNodeForm: FC<AddNodeFormType> = ({
   });
   return (
     <AccordionItem
+      className="nodes-accordion-item nodes-accordion-item--add"
       border="1px solid"
       _dark={{ borderColor: "gray.600" }}
       _light={{ borderColor: "gray.200" }}
@@ -275,7 +295,12 @@ const AddNodeForm: FC<AddNodeFormType> = ({
       p={1}
       w="full"
     >
-      <AccordionButton px={2} borderRadius="3px" onClick={toggleAccordion}>
+      <AccordionButton
+        className="nodes-accordion-button"
+        px={2}
+        borderRadius="3px"
+        onClick={toggleAccordion}
+      >
         <Text
           as="span"
           fontWeight="medium"
@@ -291,13 +316,16 @@ const AddNodeForm: FC<AddNodeFormType> = ({
           <span>{t("nodes.addNewFlewNode")}</span>
         </Text>
       </AccordionButton>
-      <AccordionPanel px={2} py={4}>
+      <AccordionPanel className="nodes-accordion-panel" px={2} py={4}>
         <NodeForm
           form={form}
           mutate={mutate}
           isLoading={isLoading}
           submitBtnText={t("nodes.addNode")}
-          btnProps={{ variant: "solid" }}
+          btnProps={{
+            variant: "solid",
+            className: "dashboard-accent-btn nodes-submit-btn nodes-compact-submit",
+          }}
           addAsHost
         />
       </AccordionPanel>
@@ -326,7 +354,11 @@ const NodeForm: NodeFormType = ({
 }) => {
   const { t } = useTranslation();
   const [showCertificate, setShowCertificate] = useState(false);
-  const { data: nodeSettings, isLoading: nodeSettingsLoading } = useQuery({
+  const isCompactNodeLayout = useBreakpointValue({ base: true, lg: false }) ?? false;
+  const submitClassName =
+    typeof btnProps.className === "string" ? btnProps.className : "";
+  const isCompactSubmit = submitClassName.includes("nodes-compact-submit");
+  const { data: nodeSettings } = useQuery({
     queryKey: "node-settings",
     queryFn: () =>
       fetch<{
@@ -334,6 +366,14 @@ const NodeForm: NodeFormType = ({
         certificate: string;
       }>("/node/settings"),
   });
+  const certificateText = String(nodeSettings?.certificate || "").trim();
+
+  useEffect(() => {
+    if (isCompactNodeLayout && certificateText) {
+      setShowCertificate(true);
+    }
+  }, [certificateText, isCompactNodeLayout]);
+
   function selectText(node: HTMLElement) {
     // @ts-ignore
     if (document.body.createTextRange) {
@@ -354,162 +394,187 @@ const NodeForm: NodeFormType = ({
 
   return (
     <form onSubmit={form.handleSubmit((v) => mutate(v))}>
-      <VStack>
-        {nodeSettings && nodeSettings.certificate && (
-          <Alert status="info" alignItems="start">
-            <AlertDescription
-              display="flex"
-              flexDirection="column"
-              overflow="hidden"
-            >
-              <span>{t("nodes.connection-hint")}</span>
-              <HStack justify="end" py={2}>
-                <Button
-                  as="a"
-                  colorScheme="primary"
-                  size="xs"
-                  download="ssl_client_cert.pem"
-                  href={URL.createObjectURL(
-                    new Blob([nodeSettings.certificate], { type: "text/plain" })
-                  )}
-                >
-                  {t("nodes.download-certificate")}
-                </Button>
-                <Tooltip
-                  placement="top"
-                  label={t(
-                    !showCertificate
-                      ? "nodes.show-certificate"
-                      : "nodes.show-certificate"
-                  )}
-                >
-                  <IconButton
-                    aria-label={t(
-                      !showCertificate
-                        ? "nodes.show-certificate"
-                        : "nodes.show-certificate"
-                    )}
-                    onClick={setShowCertificate.bind(null, !showCertificate)}
-                    colorScheme="whiteAlpha"
-                    color="primary"
-                    size="xs"
-                  >
-                    {!showCertificate ? (
-                      <EyeIcon width="15px" />
-                    ) : (
-                      <EyeSlashIcon width="15px" />
-                    )}
-                  </IconButton>
-                </Tooltip>
-              </HStack>
-              <Collapse in={showCertificate} animateOpacity>
-                <Text
-                  bg="rgba(255,255,255,.5)"
-                  _dark={{
-                    bg: "rgba(255,255,255,.2)",
-                  }}
-                  rounded="md"
-                  p="2"
-                  lineHeight="1.2"
-                  fontSize="10px"
-                  fontFamily="Courier"
-                  whiteSpace="pre"
-                  overflow="auto"
-                  onClick={(e) => {
-                    selectText(e.target as HTMLElement);
-                  }}
-                >
-                  {nodeSettings.certificate}
-                </Text>
-              </Collapse>
-            </AlertDescription>
-          </Alert>
-        )}
+      <VStack spacing={4} align="stretch">
+        <Box
+          className="node-form-layout"
+          display="grid"
+          gap={{ base: 4, xl: 5 }}
+          gridTemplateColumns={
+            certificateText
+              ? { base: "1fr", xl: "minmax(300px, 0.92fr) minmax(0, 1.08fr)" }
+              : { base: "1fr" }
+          }
+        >
+          {certificateText && (
+            <Box className="node-certificate-card">
+              <VStack align="stretch" spacing={4}>
+                <Box>
+                  <Text fontSize="sm" fontWeight="700" mb={1}>
+                    {t("nodes.certificate")}
+                  </Text>
+                  <Text fontSize="xs" color="var(--muted)">
+                    {t("nodes.connection-hint")}
+                  </Text>
+                </Box>
 
-        <HStack w="full">
-          <FormControl>
-            <CustomInput
-              label={t("nodes.nodeName")}
-              size="sm"
-              placeholder="Flew-S2"
-              {...form.register("name")}
-              error={form.formState?.errors?.name?.message}
-            />
-          </FormControl>
-          <HStack px={1}>
-            <Controller
-              name="status"
-              control={form.control}
-              render={({ field }) => {
-                return (
-                  <Tooltip
-                    key={field.value}
-                    placement="top"
-                    label={
-                      `${t("usersTable.status")}: ` +
-                      (field.value !== "disabled" ? t("active") : t("disabled"))
-                    }
-                    textTransform="capitalize"
+                <HStack
+                  spacing={3}
+                  flexWrap="wrap"
+                  flexDirection={{ base: "column", sm: "row" }}
+                  align={{ base: "stretch", sm: "center" }}
+                >
+                  <Button
+                    as="a"
+                    href={URL.createObjectURL(
+                      new Blob([certificateText], { type: "text/plain" })
+                    )}
+                    download="ssl_client_cert.pem"
+                    variant="outline"
+                    size="sm"
+                    w={{ base: "full", sm: "auto" }}
                   >
-                    <Box mt="6">
-                      <Switch
-                        colorScheme="primary"
-                        isChecked={field.value !== "disabled"}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            field.onChange("connecting");
-                          } else {
-                            field.onChange("disabled");
-                          }
-                        }}
-                      />
-                    </Box>
-                  </Tooltip>
-                );
-              }}
-            />
-          </HStack>
-        </HStack>
-        <HStack alignItems="flex-start" w="100%">
-          <Box w="100%">
-            <CustomInput
-              label={t("nodes.nodeAddress")}
-              size="sm"
-              placeholder="51.20.12.13"
-              {...form.register("address")}
-              error={form.formState?.errors?.address?.message}
-            />
-          </Box>
-        </HStack>
-        <HStack alignItems="flex-start" w="100%">
-        <Box>
-            <CustomInput
-              label={t("nodes.nodePort")}
-              size="sm"
-              placeholder="62050"
-              {...form.register("port")}
-              error={form.formState?.errors?.port?.message}
-            />
-          </Box>
-          <Box>
-            <CustomInput
-              label={t("nodes.nodeAPIPort")}
-              size="sm"
-              placeholder="62051"
-              {...form.register("api_port")}
-              error={form.formState?.errors?.api_port?.message}
-            />
-          </Box>
-          <Box>
-            <CustomInput
-              label={t("nodes.usageCoefficient")}
-              size="sm"
-              placeholder="1"
-              {...form.register("usage_coefficient")}
-              error={form.formState?.errors?.usage_coefficient?.message}
-            />
-          </Box>
-        </HStack>
+                    {t("nodes.download-certificate")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={
+                      !showCertificate ? (
+                        <EyeIcon width="15px" />
+                      ) : (
+                        <EyeSlashIcon width="15px" />
+                      )
+                    }
+                    onClick={setShowCertificate.bind(null, !showCertificate)}
+                    w={{ base: "full", sm: "auto" }}
+                  >
+                    {showCertificate
+                      ? t("nodes.hide-certificate")
+                      : t("nodes.show-certificate")}
+                  </Button>
+                </HStack>
+
+                <Collapse in={showCertificate} animateOpacity>
+                  <Text
+                    className="node-certificate-code"
+                    p={3}
+                    lineHeight="1.35"
+                    fontSize="11px"
+                    fontFamily="Courier"
+                    whiteSpace="pre"
+                    overflow="auto"
+                    onClick={(event) => {
+                      selectText(event.currentTarget as HTMLElement);
+                    }}
+                  >
+                    {certificateText}
+                  </Text>
+                </Collapse>
+              </VStack>
+            </Box>
+          )}
+
+          <VStack className="node-form-fields" spacing={4} align="stretch">
+            <Box
+              className="node-top-row"
+              w="full"
+              display="grid"
+              gap={3}
+              gridTemplateColumns="minmax(0, 1fr) auto"
+              alignItems="end"
+            >
+              <FormControl flex="1" w="full">
+                <CustomInput
+                  label={t("nodes.nodeName")}
+                  size="sm"
+                  placeholder="Flew-S2"
+                  {...form.register("name")}
+                  error={form.formState?.errors?.name?.message}
+                />
+              </FormControl>
+              <Controller
+                name="status"
+                control={form.control}
+                render={({ field }) => {
+                  const isEnabled = field.value !== "disabled";
+                  return (
+                    <Tooltip
+                      placement="top"
+                      label={isEnabled ? t("active") : t("disabled")}
+                      textTransform="capitalize"
+                    >
+                      <HStack
+                        className="desktop-user-switch node-state-switch node-state-switch--compact"
+                        data-enabled={isEnabled}
+                        w="auto"
+                        justify="center"
+                      >
+                        <Switch
+                          colorScheme="primary"
+                          isChecked={isEnabled}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              field.onChange("connecting");
+                            } else {
+                              field.onChange("disabled");
+                            }
+                          }}
+                        />
+                      </HStack>
+                    </Tooltip>
+                  );
+                }}
+              />
+            </Box>
+
+            <Box w="full">
+              <CustomInput
+                label={t("nodes.nodeAddress")}
+                size="sm"
+                placeholder="51.20.12.13"
+                {...form.register("address")}
+                error={form.formState?.errors?.address?.message}
+              />
+            </Box>
+
+            <SimpleGrid
+              className="node-fields-grid"
+              alignItems="start"
+              w="full"
+              spacing={3}
+              columns={{ base: 1, sm: 2, xl: 3 }}
+            >
+              <Box w="full">
+                <CustomInput
+                  label={t("nodes.nodePort")}
+                  size="sm"
+                  placeholder="62050"
+                  {...form.register("port")}
+                  error={form.formState?.errors?.port?.message}
+                />
+              </Box>
+              <Box w="full">
+                <CustomInput
+                  label={t("nodes.nodeAPIPort")}
+                  size="sm"
+                  placeholder="62051"
+                  {...form.register("api_port")}
+                  error={form.formState?.errors?.api_port?.message}
+                />
+              </Box>
+              <Box w="full">
+                <CustomInput
+                  label={t("nodes.usageCoefficient")}
+                  size="sm"
+                  placeholder="1"
+                  {...form.register("usage_coefficient")}
+                  error={form.formState?.errors?.usage_coefficient?.message}
+                />
+              </Box>
+            </SimpleGrid>
+          </VStack>
+        </Box>
+
         {addAsHost && (
           <FormControl py={1}>
             <Checkbox {...form.register("add_as_new_host")}>
@@ -517,15 +582,22 @@ const NodeForm: NodeFormType = ({
             </Checkbox>
           </FormControl>
         )}
-        <HStack w="full">
+        <HStack
+          className="node-submit-row"
+          w="full"
+          spacing={3}
+          flexDirection={{ base: "column-reverse", sm: "row" }}
+          align={{ base: "stretch", sm: "center" }}
+          justify={{ base: "stretch", sm: isCompactSubmit ? "flex-end" : "stretch" }}
+        >
           {btnLeftAdornment}
           <Button
-            flexGrow={1}
+            flexGrow={isCompactSubmit ? 0 : 1}
             type="submit"
             colorScheme="primary"
             size="sm"
             px={5}
-            w="full"
+            w={isCompactSubmit ? { base: "full", sm: "auto" } : "full"}
             isLoading={isLoading}
             {...btnProps}
           >
@@ -594,11 +666,12 @@ export const NodesPanel: FC = () => {
       {isLoading && "loading..."}
 
       <Accordion
+        className="nodes-panel-accordion"
         w="full"
         allowToggle
         index={Object.keys(openAccordions).map((i) => parseInt(i))}
       >
-        <VStack w="full">
+        <VStack className="nodes-panel-stack" w="full">
           {!isLoading &&
             nodes &&
             nodes.map((node, index) => {

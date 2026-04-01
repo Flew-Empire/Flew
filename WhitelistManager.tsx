@@ -100,7 +100,7 @@ export const WhitelistManager: FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const whitelistsRes = await fetch("/api/xpert/whitelists", {
+      const whitelistsRes = await fetch("/api/flew/whitelists", {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       setWhitelists(whitelistsRes.whitelists || []);
@@ -120,7 +120,7 @@ export const WhitelistManager: FC = () => {
 
   const loadWhitelistHosts = async (whitelistId: string) => {
     try {
-      const hostsRes = await fetch(`/api/xpert/whitelists/${whitelistId}/hosts`, {
+      const hostsRes = await fetch(`/api/flew/whitelists/${whitelistId}/hosts`, {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       setWhitelistHosts(hostsRes.hosts || []);
@@ -150,7 +150,7 @@ export const WhitelistManager: FC = () => {
     }
 
     try {
-      await fetch("/api/xpert/whitelists", {
+      await fetch("/api/flew/whitelists", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,
@@ -186,7 +186,7 @@ export const WhitelistManager: FC = () => {
     }
 
     try {
-      await fetch(`/api/xpert/whitelists/${selectedWhitelist.id}/hosts`, {
+      await fetch(`/api/flew/whitelists/${selectedWhitelist.id}/hosts`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,
@@ -214,7 +214,7 @@ export const WhitelistManager: FC = () => {
 
   const handleDeleteWhitelist = async (id: string) => {
     try {
-      await fetch(`/api/xpert/whitelists/${id}`, {
+      await fetch(`/api/flew/whitelists/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
@@ -237,7 +237,7 @@ export const WhitelistManager: FC = () => {
     if (!selectedWhitelist) return;
     
     try {
-      await fetch(`/api/xpert/whitelists/${selectedWhitelist.id}/hosts/${host}`, {
+      await fetch(`/api/flew/whitelists/${selectedWhitelist.id}/hosts/${host}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });

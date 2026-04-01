@@ -34,6 +34,7 @@ import {
 import { AdjustmentsHorizontalIcon } from "@heroicons/react/24/outline";
 import { FC, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import useGetUser from "hooks/useGetUser";
 import { fetch } from "service/http";
 import { Admin } from "types/Admin";
@@ -55,11 +56,16 @@ type UsersResponse = {
   total: number;
 };
 
-export const AdminLimitsModal: FC = () => {
+export const AdminLimitsModal: FC<{ mode?: "modal" | "page" }> = ({
+  mode = "modal",
+}) => {
   const { isEditingAdminLimits, onEditingAdminLimits } = useDashboard();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { userData, getUserIsSuccess, getUserIsPending } = useGetUser();
   const toast = useToast();
+  const isPageMode = mode === "page";
+  const isActive = isPageMode || isEditingAdminLimits;
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -69,6 +75,8 @@ export const AdminLimitsModal: FC = () => {
   const [trafficUnit, setTrafficUnit] = useState<string>("GB");
   const [userTrafficLimit, setUserTrafficLimit] = useState<string>("");
   const [userTrafficUnit, setUserTrafficUnit] = useState<string>("GB");
+  const [uniqueIpLimit, setUniqueIpLimit] = useState<string>("");
+  const [deviceLimit, setDeviceLimit] = useState<string>("");
   const [usersCount, setUsersCount] = useState<number>(0);
 
   const nonSudoAdmins = useMemo(
@@ -106,12 +114,19 @@ export const AdminLimitsModal: FC = () => {
 
   const onClose = () => {
     onEditingAdminLimits(false);
+    if (isPageMode) {
+      navigate("/", { replace: true });
+    }
   };
 
   useEffect(() => {
-    if (!isEditingAdminLimits) return;
+    if (!isActive) return;
     if (!getUserIsPending && getUserIsSuccess && !userData.is_sudo) {
-      onEditingAdminLimits(false);
+      if (isPageMode) {
+        navigate("/", { replace: true });
+      } else {
+        onEditingAdminLimits(false);
+      }
       return;
     }
     setLoading(true);
@@ -131,7 +146,17 @@ export const AdminLimitsModal: FC = () => {
         });
       })
       .finally(() => setLoading(false));
-  }, [isEditingAdminLimits]);
+  }, [
+    getUserIsPending,
+    getUserIsSuccess,
+    isActive,
+    isPageMode,
+    navigate,
+    onEditingAdminLimits,
+    t,
+    toast,
+    userData?.is_sudo,
+  ]);
 
   useEffect(() => {
     if (!selectedAdmin) {
@@ -140,6 +165,8 @@ export const AdminLimitsModal: FC = () => {
       setTrafficUnit("GB");
       setUserTrafficLimit("");
       setUserTrafficUnit("GB");
+      setUniqueIpLimit("");
+      setDeviceLimit("");
       setUsersCount(0);
       return;
     }
@@ -149,6 +176,16 @@ export const AdminLimitsModal: FC = () => {
     setUsersLimit(
       selectedAdmin.users_limit !== null && selectedAdmin.users_limit !== undefined
         ? String(selectedAdmin.users_limit)
+        : ""
+    );
+    setUniqueIpLimit(
+      selectedAdmin.unique_ip_limit !== null && selectedAdmin.unique_ip_limit !== undefined
+        ? String(selectedAdmin.unique_ip_limit)
+        : ""
+    );
+    setDeviceLimit(
+      selectedAdmin.device_limit !== null && selectedAdmin.device_limit !== undefined
+        ? String(selectedAdmin.device_limit)
         : ""
     );
     fetch<{ limit_bytes: number | null }>(`/flew/admin-user-traffic-limit/${encodeURIComponent(selectedAdmin.username)}`)
@@ -175,6 +212,80 @@ export const AdminLimitsModal: FC = () => {
     if (Number.isNaN(num) || num < 0) return null;
     return Math.floor(num);
   };
+
+  const parsePositiveLimit = (value: string) => {
+    const parsed = parseLimit(value);
+    if (parsed === null || parsed < 1) return null;
+    return parsed;
+  };
+
+  const renderAdminOverviewCard = (admin: Admin) => (
+    <Box
+      key={admin.username}
+      border="1px solid"
+      borderColor="gray.200"
+      _dark={{
+        borderColor: "rgba(191, 219, 254, 0.24)",
+        bg: "rgba(12, 16, 32, 0.5)",
+      }}
+      borderRadius="md"
+      p={3}
+      bg="rgba(255, 255, 255, 0.56)"
+    >
+      <HStack justify="space-between" mb={2} align="flex-start" spacing={3}>
+        <Text fontWeight="semibold" fontSize="sm" noOfLines={1}>
+          {admin.username}
+        </Text>
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={() => onResetAdminUsage(admin.username)}
+          isDisabled={saving}
+          flexShrink={0}
+        >
+          {t("adminLimits.resetUsage")}
+        </Button>
+      </HStack>
+      <VStack spacing={1.5} align="stretch">
+        <HStack justify="space-between" gap={3}>
+          <Text fontSize="xs">{t("adminLimits.tableUsers")}</Text>
+          <Text fontSize="xs" fontWeight="medium">
+            {admin.username === selected ? usersCount : "-"}
+          </Text>
+        </HStack>
+        <HStack justify="space-between" gap={3}>
+          <Text fontSize="xs">{t("adminLimits.tableUsersLimit")}</Text>
+          <Text fontSize="xs" fontWeight="medium">
+            {admin.users_limit ?? "-"}
+          </Text>
+        </HStack>
+        <HStack justify="space-between" gap={3}>
+          <Text fontSize="xs">{t("adminLimits.tableUniqueIpLimit")}</Text>
+          <Text fontSize="xs" fontWeight="medium">
+            {admin.unique_ip_limit ?? "-"}
+          </Text>
+        </HStack>
+        <HStack justify="space-between" gap={3}>
+          <Text fontSize="xs">{t("adminLimits.tableDeviceLimit")}</Text>
+          <Text fontSize="xs" fontWeight="medium">
+            {admin.device_limit ?? "-"}
+          </Text>
+        </HStack>
+        <HStack justify="space-between" gap={3}>
+          <Text fontSize="xs">{t("adminLimits.tableTrafficUsed")}</Text>
+          <Text fontSize="xs" fontWeight="medium">
+            {formatBytes(admin.users_usage)}
+          </Text>
+        </HStack>
+        <HStack justify="space-between" gap={3}>
+          <Text fontSize="xs">{t("adminLimits.tableTrafficLimit")}</Text>
+          <Text fontSize="xs" fontWeight="medium">
+            {admin.traffic_limit ? formatBytes(admin.traffic_limit) : "-"}
+          </Text>
+        </HStack>
+      </VStack>
+    </Box>
+  );
 
   const onResetAdminUsage = (username: string) => {
     if (!username) return;
@@ -218,6 +329,8 @@ export const AdminLimitsModal: FC = () => {
       traffic_limit:
         trafficValue === null ? null : unitToBytes(trafficValue, trafficUnit),
       users_limit: parseLimit(usersLimit),
+      unique_ip_limit: parsePositiveLimit(uniqueIpLimit),
+      device_limit: parsePositiveLimit(deviceLimit),
     };
     const userTrafficPayload = {
       admin_username: selectedAdmin.username,
@@ -269,22 +382,38 @@ export const AdminLimitsModal: FC = () => {
       .finally(() => setSaving(false));
   };
 
-  return (
-    <Modal isCentered isOpen={isEditingAdminLimits} onClose={onClose} size="xl" scrollBehavior="inside">
-      <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
-      <ModalContent mx="3" w={{ base: "calc(100vw - 24px)", md: "auto" }} maxW={{ base: "calc(100vw - 24px)", md: "3xl" }}>
-        <ModalHeader pt={6}>
-          <Icon color="primary">
-            <LimitsIcon />
-          </Icon>
-        </ModalHeader>
-        <ModalCloseButton mt={3} />
-        <ModalBody>
-          <Text fontWeight="semibold" fontSize="lg">
-            {t("adminLimits.title")}
-          </Text>
+  const FrameComponent: any = isPageMode ? Box : ModalContent;
+  const HeaderComponent: any = isPageMode ? Box : ModalHeader;
+  const BodyComponent: any = isPageMode ? Box : ModalBody;
+  const FooterComponent: any = isPageMode ? Box : ModalFooter;
+
+  const content = (
+      <FrameComponent
+        className={`workspace-page-modal${isPageMode ? " workspace-route-page" : ""}`}
+        mx={isPageMode ? 0 : { base: 0, lg: 3 }}
+        my={isPageMode ? 0 : { base: 0, lg: 3 }}
+        w={isPageMode ? "100%" : { base: "100vw", lg: "calc(100vw - 24px)" }}
+        maxW={isPageMode ? "100%" : { base: "100vw", xl: "1160px" }}
+        minH={isPageMode ? undefined : { base: "100vh", lg: "calc(100vh - 24px)" }}
+        alignSelf={isPageMode ? undefined : "center"}
+      >
+        <HeaderComponent
+          pt={isPageMode ? undefined : 6}
+          className={isPageMode ? "chakra-modal__header" : undefined}
+        >
+          <HStack gap={2}>
+            <Icon color="primary">
+              <LimitsIcon />
+            </Icon>
+            <Text fontWeight="semibold" fontSize="lg">
+              {t("adminLimits.title")}
+            </Text>
+          </HStack>
+        </HeaderComponent>
+        {!isPageMode && <ModalCloseButton mt={3} />}
+        <BodyComponent className={isPageMode ? "chakra-modal__body" : undefined}>
           <Text
-            mt={1}
+            mt={0}
             fontSize="sm"
             _dark={{ color: "gray.400" }}
             color="gray.600"
@@ -304,7 +433,11 @@ export const AdminLimitsModal: FC = () => {
               </HStack>
             )}
 
-            <FormControl>
+            <FormControl
+              maxW={{ base: "100%", md: "280px", lg: "240px" }}
+              w="100%"
+              alignSelf="flex-start"
+            >
               <FormLabel fontSize="sm">{t("adminLimits.selectAdmin")}</FormLabel>
               <Select
                 size="sm"
@@ -320,32 +453,53 @@ export const AdminLimitsModal: FC = () => {
               </Select>
             </FormControl>
 
-            <Stack spacing={3} align="flex-start" direction={{ base: "column", md: "row" }}>
-              <FormControl>
-                <FormLabel fontSize="sm">{t("adminLimits.usersLimit")}</FormLabel>
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                base: "1fr",
+                md: "repeat(2, minmax(0, 1fr))",
+                lg: "minmax(120px, 0.9fr) minmax(180px, 1.2fr) minmax(190px, 1.25fr) minmax(120px, 0.85fr) minmax(120px, 0.85fr)",
+              }}
+              gap={{ base: 3, lg: 2 }}
+              alignItems="start"
+            >
+              <FormControl minW={0}>
+                <FormLabel fontSize={{ base: "sm", lg: "xs" }} mb={{ base: 2, lg: 1 }}>
+                  {t("adminLimits.usersLimit")}
+                </FormLabel>
                 <NumberInput
                   size="sm"
                   min={0}
                   value={usersLimit}
                   onChange={(valueString) => setUsersLimit(valueString)}
                 >
-                  <NumberInputField placeholder={t("adminLimits.usersLimitPlaceholder")} />
+                  <NumberInputField
+                    placeholder={t("adminLimits.usersLimitPlaceholder")}
+                    px={{ lg: 2.5 }}
+                  />
                   <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
                   </NumberInputStepper>
                 </NumberInput>
               </FormControl>
-              <FormControl>
-                <FormLabel fontSize="sm">{t("adminLimits.trafficLimit")}</FormLabel>
-                <HStack>
+
+              <FormControl minW={0}>
+                <FormLabel fontSize={{ base: "sm", lg: "xs" }} mb={{ base: 2, lg: 1 }}>
+                  {t("adminLimits.trafficLimit")}
+                </FormLabel>
+                <HStack spacing={{ base: 2, lg: 1.5 }} align="stretch">
                   <NumberInput
                     size="sm"
                     min={0}
                     value={trafficLimit}
                     onChange={(valueString) => setTrafficLimit(valueString)}
+                    flex={1}
                   >
-                    <NumberInputField placeholder={t("adminLimits.trafficLimitPlaceholder")} />
+                    <NumberInputField
+                      placeholder={t("adminLimits.trafficLimitPlaceholder")}
+                      px={{ lg: 2.5 }}
+                    />
                     <NumberInputStepper>
                       <NumberIncrementStepper />
                       <NumberDecrementStepper />
@@ -355,44 +509,98 @@ export const AdminLimitsModal: FC = () => {
                     size="sm"
                     value={trafficUnit}
                     onChange={(e) => setTrafficUnit(e.target.value)}
-                    width="90px"
+                    width={{ base: "88px", lg: "72px" }}
+                    flexShrink={0}
                   >
                     <option value="GB">GB</option>
                     <option value="TB">TB</option>
                   </Select>
                 </HStack>
               </FormControl>
-            </Stack>
 
-            <FormControl>
-              <FormLabel fontSize="sm">{t("adminLimits.userTrafficLimit")}</FormLabel>
-              <HStack>
+              <FormControl minW={0}>
+                <FormLabel fontSize={{ base: "sm", lg: "xs" }} mb={{ base: 2, lg: 1 }}>
+                  {t("adminLimits.userTrafficLimit")}
+                </FormLabel>
+                <HStack spacing={{ base: 2, lg: 1.5 }} align="stretch">
+                  <NumberInput
+                    size="sm"
+                    min={0}
+                    value={userTrafficLimit}
+                    onChange={(valueString) => setUserTrafficLimit(valueString)}
+                    flex={1}
+                  >
+                    <NumberInputField
+                      placeholder={t("adminLimits.userTrafficLimitPlaceholder")}
+                      px={{ lg: 2.5 }}
+                    />
+                    <NumberInputStepper>
+                      <NumberIncrementStepper />
+                      <NumberDecrementStepper />
+                    </NumberInputStepper>
+                  </NumberInput>
+                  <Select
+                    size="sm"
+                    value={userTrafficUnit}
+                    onChange={(e) => setUserTrafficUnit(e.target.value)}
+                    width={{ base: "88px", lg: "72px" }}
+                    flexShrink={0}
+                  >
+                    <option value="GB">GB</option>
+                    <option value="TB">TB</option>
+                  </Select>
+                </HStack>
+              </FormControl>
+
+              <FormControl minW={0}>
+                <FormLabel fontSize={{ base: "sm", lg: "xs" }} mb={{ base: 2, lg: 1 }}>
+                  {t("adminLimits.uniqueIpLimit")}
+                </FormLabel>
                 <NumberInput
                   size="sm"
                   min={0}
-                  value={userTrafficLimit}
-                  onChange={(valueString) => setUserTrafficLimit(valueString)}
+                  value={uniqueIpLimit}
+                  onChange={(valueString) => setUniqueIpLimit(valueString)}
                 >
-                  <NumberInputField placeholder={t("adminLimits.userTrafficLimitPlaceholder")} />
+                  <NumberInputField
+                    placeholder={t("adminLimits.uniqueIpLimitPlaceholder")}
+                    px={{ lg: 2.5 }}
+                  />
                   <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
                   </NumberInputStepper>
                 </NumberInput>
-                <Select
+              </FormControl>
+
+              <FormControl minW={0}>
+                <FormLabel fontSize={{ base: "sm", lg: "xs" }} mb={{ base: 2, lg: 1 }}>
+                  {t("adminLimits.deviceLimit")}
+                </FormLabel>
+                <NumberInput
                   size="sm"
-                  value={userTrafficUnit}
-                  onChange={(e) => setUserTrafficUnit(e.target.value)}
-                  width="90px"
+                  min={0}
+                  value={deviceLimit}
+                  onChange={(valueString) => setDeviceLimit(valueString)}
                 >
-                  <option value="GB">GB</option>
-                  <option value="TB">TB</option>
-                </Select>
-              </HStack>
-            </FormControl>
+                  <NumberInputField
+                    placeholder={t("adminLimits.deviceLimitPlaceholder")}
+                    px={{ lg: 2.5 }}
+                  />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
+              </FormControl>
+            </Box>
 
             <VStack spacing={2} align="stretch">
-              <Text fontWeight="semibold" fontSize="sm">
+              <Text
+                fontWeight="semibold"
+                fontSize="sm"
+                display={{ base: "none", md: "block" }}
+              >
                 {t("adminLimits.tableTitle")}
               </Text>
               <Box
@@ -410,6 +618,8 @@ export const AdminLimitsModal: FC = () => {
                       <Th>{t("adminLimits.tableAdmin")}</Th>
                       <Th isNumeric>{t("adminLimits.tableUsers")}</Th>
                       <Th isNumeric>{t("adminLimits.tableUsersLimit")}</Th>
+                      <Th isNumeric>{t("adminLimits.tableUniqueIpLimit")}</Th>
+                      <Th isNumeric>{t("adminLimits.tableDeviceLimit")}</Th>
                       <Th isNumeric>{t("adminLimits.tableTrafficUsed")}</Th>
                       <Th isNumeric>{t("adminLimits.tableTrafficLimit")}</Th>
                       <Th textAlign="right">{t("adminLimits.tableActions")}</Th>
@@ -421,6 +631,8 @@ export const AdminLimitsModal: FC = () => {
                         <Td whiteSpace="nowrap">{admin.username}</Td>
                         <Td isNumeric>{admin.username === selected ? usersCount : "-"}</Td>
                         <Td isNumeric>{admin.users_limit ?? "-"}</Td>
+                        <Td isNumeric>{admin.unique_ip_limit ?? "-"}</Td>
+                        <Td isNumeric>{admin.device_limit ?? "-"}</Td>
                         <Td isNumeric whiteSpace="nowrap">{formatBytes(admin.users_usage)}</Td>
                         <Td isNumeric whiteSpace="nowrap">{admin.traffic_limit ? formatBytes(admin.traffic_limit) : "-"}</Td>
                         <Td textAlign="right">
@@ -438,40 +650,44 @@ export const AdminLimitsModal: FC = () => {
                   </Tbody>
                 </Table>
               </Box>
+            </VStack>
 
-              <VStack display={{ base: "flex", md: "none" }} spacing={2} align="stretch">
-                {nonSudoAdmins.map((admin) => (
-                  <Box
-                    key={admin.username}
-                    border="1px solid"
-                    borderColor="gray.200"
-                    _dark={{ borderColor: "rgba(191, 219, 254, 0.24)", bg: "rgba(12, 16, 32, 0.5)" }}
-                    borderRadius="md"
-                    p={3}
-                  >
-                    <HStack justify="space-between" mb={2}>
-                      <Text fontWeight="semibold" fontSize="sm">{admin.username}</Text>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        onClick={() => onResetAdminUsage(admin.username)}
-                        isDisabled={saving}
-                      >
-                        {t("adminLimits.resetUsage")}
-                      </Button>
-                    </HStack>
-                    <HStack justify="space-between"><Text fontSize="xs">{t("adminLimits.tableUsers")}</Text><Text fontSize="xs">{admin.username === selected ? usersCount : "-"}</Text></HStack>
-                    <HStack justify="space-between"><Text fontSize="xs">{t("adminLimits.tableUsersLimit")}</Text><Text fontSize="xs">{admin.users_limit ?? "-"}</Text></HStack>
-                    <HStack justify="space-between"><Text fontSize="xs">{t("adminLimits.tableTrafficUsed")}</Text><Text fontSize="xs">{formatBytes(admin.users_usage)}</Text></HStack>
-                    <HStack justify="space-between"><Text fontSize="xs">{t("adminLimits.tableTrafficLimit")}</Text><Text fontSize="xs">{admin.traffic_limit ? formatBytes(admin.traffic_limit) : "-"}</Text></HStack>
-                  </Box>
-                ))}
-              </VStack>
+            <VStack
+              display={{ base: "flex", md: "none" }}
+              spacing={3}
+              align="stretch"
+              w="full"
+            >
+              <Text fontWeight="semibold" fontSize="sm">
+                {t("adminLimits.tableTitle")}
+              </Text>
+              {nonSudoAdmins.length ? (
+                nonSudoAdmins.map(renderAdminOverviewCard)
+              ) : (
+                <Box
+                  border="1px solid"
+                  borderColor="gray.200"
+                  _dark={{
+                    borderColor: "rgba(191, 219, 254, 0.24)",
+                    bg: "rgba(12, 16, 32, 0.5)",
+                  }}
+                  borderRadius="md"
+                  p={3}
+                  bg="rgba(255, 255, 255, 0.56)"
+                >
+                  <Text fontSize="sm">{t("adminLimits.noAdmins")}</Text>
+                </Box>
+              )}
             </VStack>
 
           </VStack>
-        </ModalBody>
-        <ModalFooter display="flex" flexDirection={{ base: "column", md: "row" }} gap={2}>
+        </BodyComponent>
+        <FooterComponent
+          display="flex"
+          flexDirection={{ base: "column", md: "row" }}
+          gap={2}
+          className={isPageMode ? "chakra-modal__footer" : undefined}
+        >
           <Button size="sm" onClick={onClose} mr={{ base: 0, md: 3 }} w="full" variant="outline">
             {t("cancel")}
           </Button>
@@ -479,14 +695,31 @@ export const AdminLimitsModal: FC = () => {
             size="sm"
             w="full"
             colorScheme="primary"
+            className="dashboard-accent-btn"
             onClick={onSave}
             leftIcon={saving ? <Spinner size="xs" /> : undefined}
             isDisabled={loading || !selectedAdmin}
           >
             {t("save")}
           </Button>
-        </ModalFooter>
-      </ModalContent>
+        </FooterComponent>
+      </FrameComponent>
+  );
+
+  if (isPageMode) {
+    return content;
+  }
+
+  return (
+    <Modal
+      isOpen={isEditingAdminLimits}
+      onClose={onClose}
+      size="full"
+      scrollBehavior="inside"
+      motionPreset="slideInBottom"
+    >
+      <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
+      {content}
     </Modal>
   );
 };

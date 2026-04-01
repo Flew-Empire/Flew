@@ -14,6 +14,8 @@ def validate_admin(db: Session, username: str, password: str) -> Optional[AdminV
         return AdminValidationResult(username=username, is_sudo=True)
 
     dbadmin = crud.get_admin(db, username)
+    if dbadmin and getattr(dbadmin, "is_disabled", False):
+        return None
     if dbadmin and AdminInDB.model_validate(dbadmin).verify_password(password):
         return AdminValidationResult(username=dbadmin.username, is_sudo=dbadmin.is_sudo)
 
@@ -64,11 +66,7 @@ def get_user_template(template_id: int, db: Session = Depends(get_db)):
     return dbuser_template
 
 
-def get_validated_sub(
-        token: str,
-        db: Session = Depends(get_db)
-) -> UserResponse:
-    sub = get_subscription_payload(token)
+def _validate_subscription_payload(sub: Optional[dict], db: Session) -> UserResponse:
     if not sub:
         raise HTTPException(status_code=404, detail="Not Found")
 
@@ -96,6 +94,24 @@ def get_validated_sub(
         pass
 
     return dbuser
+
+
+def get_validated_sub(
+        token: str,
+        db: Session = Depends(get_db)
+) -> UserResponse:
+    return _validate_subscription_payload(get_subscription_payload(token), db)
+
+
+def get_validated_sub_opaque(
+        opaque_a: str,
+        opaque_b: str,
+        db: Session = Depends(get_db)
+) -> UserResponse:
+    return _validate_subscription_payload(
+        get_subscription_payload(f"{opaque_a}/{opaque_b}"),
+        db,
+    )
 
 
 def get_validated_user(

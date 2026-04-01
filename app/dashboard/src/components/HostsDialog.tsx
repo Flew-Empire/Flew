@@ -9,7 +9,6 @@ import {
   Button,
   Select as ChakraSelect,
   Checkbox,
-  Container,
   FormControl,
   FormErrorMessage,
   FormLabel,
@@ -166,6 +165,33 @@ const Error = chakra(FormErrorMessage, {
   },
 });
 
+const formatHostProtocolTitle = (
+  inbound:
+    | {
+        protocol?: string;
+        network?: string;
+        tls?: string;
+      }
+    | undefined,
+  fallback: string
+) => {
+  if (!inbound) return fallback;
+
+  const protocol = String(inbound.protocol || "").toUpperCase();
+  const network = String(inbound.network || "tcp").toUpperCase();
+  const tls = String(inbound.tls || "none").toLowerCase();
+
+  if (network === "TCP") {
+    return `${protocol} ${network}`;
+  }
+
+  if (tls === "none") {
+    return `${protocol}-${network}-NOTLS`;
+  }
+
+  return `${protocol} ${network}`;
+};
+
 type AccordionInboundType = {
   hostKey: string;
   isOpen: boolean;
@@ -196,6 +222,7 @@ const AccordionInbound: FC<AccordionInboundType> = ({
   const { errors } = form.formState;
   const { t } = useTranslation();
   const accordionErrors = errors[hostKey];
+  const hostCardTitle = formatHostProtocolTitle(inbound, hostKey);
   const handleAddHost = () => {
     addHost({
       host: "",
@@ -237,28 +264,33 @@ const AccordionInbound: FC<AccordionInboundType> = ({
 
   return (
     <AccordionItem
+      className="hosts-protocol-card"
       border="1px solid"
       _dark={{ borderColor: "gray.600" }}
       _light={{ borderColor: "gray.200" }}
-      borderRadius="4px"
+      borderRadius="18px"
       p={1}
       w="full"
     >
-      <AccordionButton px={2} borderRadius="3px" onClick={toggleAccordion}>
-        <Text
-          as="span"
-          fontWeight="medium"
-          fontSize="sm"
-          flex="1"
-          textAlign="left"
-          color="gray.700"
-          _dark={{ color: "gray.300" }}
-        >
-          {hostKey}
-        </Text>
-        <AccordionIcon />
+      <AccordionButton px={3} py={3} borderRadius="16px" onClick={toggleAccordion}>
+        <HStack w="full" justify="space-between" spacing={3} align="flex-start">
+          <Box textAlign="left" minW={0}>
+            <Text fontWeight="700" fontSize="sm" noOfLines={1}>
+              {hostCardTitle}
+            </Text>
+            <Text fontSize="xs" color="var(--muted)" noOfLines={1} mt={1}>
+              {hostKey}
+            </Text>
+          </Box>
+          <HStack spacing={2} flexShrink={0}>
+            <Badge colorScheme="blue" borderRadius="full">
+              {hosts.length}
+            </Badge>
+            <AccordionIcon />
+          </HStack>
+        </HStack>
       </AccordionButton>
-      <AccordionPanel px={2} pb={2}>
+      <AccordionPanel px={3} pb={3}>
         <VStack gap={3}>
           {hosts.map((host, index) => {
             return (
@@ -281,12 +313,13 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                 <VStack
                   id={host.id}
                   key={host.id}
+                  className="hosts-entry-card"
                   border="1px solid"
                   _dark={{ borderColor: "gray.600", bg: "#273142" }}
                   _light={{ borderColor: "gray.200", bg: "#fcfbfb" }}
-                  p={2}
+                  p={{ base: 3, md: 3 }}
                   w="full"
-                  borderRadius="4px"
+                  borderRadius="16px"
                 >
                   <HStack w="100%" alignItems="flex-start">
                     <FormControl
@@ -300,7 +333,7 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                         <Input
                           {...form.register(hostKey + "." + index + ".remark")}
                           size="sm"
-                          borderRadius="4px"
+                          borderRadius="12px"
                           placeholder="Remark"
                         />
                         <InputRightElement>
@@ -539,42 +572,68 @@ const AccordionInbound: FC<AccordionInboundType> = ({
 
                   <Accordion w="full" allowToggle>
                     <AccordionItem border="0">
-                      <div style={{ display: "flex", alignItems: "center" }}>
-                        <AccordionButton
-                          display="flex"
-                          px={0}
-                          py={1}
-                          borderRadius={3}
-                          _hover={{ bg: "transparent" }}
+                      <VStack
+                        className="hosts-entry-toolbar"
+                        spacing={2}
+                        align="stretch"
+                      >
+                        <HStack
+                          spacing={3}
+                          align="center"
+                          flexDirection={{ base: "column", md: "row" }}
                         >
-                          <Text
-                            flex="3"
-                            align="start"
-                            fontSize="xs"
-                            color="gray.600"
-                            _dark={{ color: "gray.500" }}
-                            pl={1}
+                          <AccordionButton
+                            flex="1"
+                            px={0}
+                            py={1}
+                            borderRadius={3}
+                            _hover={{ bg: "transparent" }}
                           >
-                            {t("hostsDialog.advancedOptions")}
-                            <AccordionIcon fontSize="sm" ml={1} />
-                          </Text>
+                            <Text
+                              flex="1"
+                              align="start"
+                              fontSize="xs"
+                              color="gray.600"
+                              _dark={{ color: "gray.500" }}
+                              pl={1}
+                            >
+                              {t("hostsDialog.advancedOptions")}
+                              <AccordionIcon fontSize="sm" ml={1} />
+                            </Text>
+                          </AccordionButton>
 
-                          <Container flex="1" px="0" display={"contents"}>
+                          <HStack
+                            spacing={2}
+                            flexWrap="wrap"
+                            w={{ base: "full", md: "auto" }}
+                            justify={{ base: "space-between", md: "flex-end" }}
+                          >
                             <Controller
                               control={form.control}
                               name={`${hostKey}.${index}.is_disabled`}
                               render={({ field }) => {
+                                const isEnabled = !field.value;
                                 return (
-                                  <Switch
-                                    mx="1.5"
-                                    colorScheme="primary"
-                                    {...field}
-                                    value={undefined}
-                                    isChecked={!field.value}
-                                    onChange={(e) => {
-                                      field.onChange(!e.target.checked);
-                                    }}
-                                  />
+                                  <Tooltip
+                                    placement="top"
+                                    label={isEnabled ? t("active") : t("disabled")}
+                                    textTransform="capitalize"
+                                  >
+                                    <HStack
+                                      className="desktop-user-switch hosts-state-switch hosts-state-switch--compact"
+                                      data-enabled={isEnabled}
+                                      w={{ base: "auto", sm: "auto" }}
+                                      justify="center"
+                                    >
+                                      <Switch
+                                        colorScheme="primary"
+                                        isChecked={isEnabled}
+                                        onChange={(e) => {
+                                          field.onChange(!e.target.checked);
+                                        }}
+                                      />
+                                    </HStack>
+                                  </Tooltip>
                                 );
                               }}
                             />
@@ -583,52 +642,49 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                                 aria-label="Delete"
                                 size="sm"
                                 colorScheme="red"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={removeHost.bind(null, index)}
                               >
                                 <DeleteIcon />
                               </IconButton>
                             </Tooltip>
-                          </Container>
-                        </AccordionButton>
-                        <Tooltip label="Duplicate" placement="top">
-                          <IconButton
-                            aria-label="Duplicate"
-                            size="sm"
-                            colorScheme="white"
-                            variant="ghost"
-                            onClick={() => duplicateHost(index)}
-                          >
-                            <DuplicateIcon />
-                          </IconButton>
-                        </Tooltip>
-                        {index < hosts.length - 1 && (
-                          <Tooltip label="Move Down" placement="top">
-                            <IconButton
-                              aria-label="DownIcon"
-                              size="sm"
-                              colorScheme="white"
-                              variant="ghost"
-                              onClick={() => moveHostPosition(index, "down")}
-                            >
-                              <DownIcon />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        {index > 0 && (
-                          <Tooltip label="Move Up" placement="top">
-                            <IconButton
-                              aria-label="UpIcon"
-                              size="sm"
-                              colorScheme="white"
-                              variant="ghost"
-                              onClick={() => moveHostPosition(index, "up")}
-                            >
-                              <UpIcon />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </div>
+                            <Tooltip label="Duplicate" placement="top">
+                              <IconButton
+                                aria-label="Duplicate"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => duplicateHost(index)}
+                              >
+                                <DuplicateIcon />
+                              </IconButton>
+                            </Tooltip>
+                            {index < hosts.length - 1 && (
+                              <Tooltip label="Move Down" placement="top">
+                                <IconButton
+                                  aria-label="DownIcon"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => moveHostPosition(index, "down")}
+                                >
+                                  <DownIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {index > 0 && (
+                              <Tooltip label="Move Up" placement="top">
+                                <IconButton
+                                  aria-label="UpIcon"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => moveHostPosition(index, "up")}
+                                >
+                                  <UpIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </HStack>
+                        </HStack>
+                      </VStack>
                       <AccordionPanel w="full" p={1}>
                         <VStack key={index} w="full" borderRadius="4px">
                           <FormControl
@@ -1317,7 +1373,7 @@ export const HostsPanel: FC<HostsPanelProps> = ({ isActive = true }) => {
               allowMultiple
               index={Object.keys(openAccordions).map((i) => parseInt(i))}
             >
-              <VStack w="full">
+              <Box className="hosts-protocol-grid" w="full">
                 {Object.keys(hosts).map((hostKey, index) => {
                   return (
                     <AccordionInbound
@@ -1328,20 +1384,25 @@ export const HostsPanel: FC<HostsPanelProps> = ({ isActive = true }) => {
                     />
                   );
                 })}
-              </VStack>
+              </Box>
             </Accordion>
           ) : (
             "No inbound found. Please check your Xray config file."
           ))}
 
-        <HStack justifyContent="flex-end" py={2}>
+        <HStack
+          justifyContent={{ base: "stretch", md: "flex-end" }}
+          py={2}
+        >
           <Button
+            className="dashboard-accent-btn"
             variant="solid"
             mt="2"
             type="submit"
             colorScheme="primary"
             size="sm"
             px={5}
+            w={{ base: "full", md: "auto" }}
             isLoading={isPostLoading}
             disabled={isPostLoading}
           >

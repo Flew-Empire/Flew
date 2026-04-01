@@ -52,30 +52,32 @@ const InboundCard: FC<
     <Box as="label">
       <input {...inputProps} />
       <Box
+        className="protocol-inbound-card"
         w="fll"
         position="relative"
         {...htmlProps}
         cursor="pointer"
         borderRadius="sm"
         border="1px solid"
-        borderColor={"gray.200"}
+        borderColor="rgba(148, 163, 184, 0.18)"
+        bg="rgba(255, 255, 255, 0.54)"
         _dark={{
-          borderColor: "gray.600",
+          borderColor: "rgba(148, 163, 184, 0.18)",
+          bg: "rgba(148, 163, 184, 0.06)",
         }}
         display="flex"
         alignItems="center"
         justifyContent="space-between"
         overflow="hidden"
         _checked={{
-          bg: "gray.50",
-          outline: "2px",
-          boxShadow: "outline",
-          outlineColor: "primary.500",
-          borderColor: "transparent",
+          bg: "rgba(37, 99, 235, 0.06)",
+          boxShadow: "0 0 0 1px var(--blue-border)",
+          borderColor: "rgba(37, 99, 235, 0.08)",
           fontWeight: "medium",
           _dark: {
-            bg: "gray.750",
-            borderColor: "transparent",
+            bg: "rgba(125, 211, 252, 0.12)",
+            boxShadow: "0 0 0 1px rgba(125, 211, 252, 0.2)",
+            borderColor: "rgba(125, 211, 252, 0.14)",
           },
           "& p": {
             opacity: 1,
@@ -188,21 +190,27 @@ const RadioCard: FC<
   return (
     <AccordionItem
       isDisabled={!protocolHasInbound}
+      className="protocol-config-card"
       borderRadius="md"
       borderStyle="solid"
       border="1px"
-      borderColor="gray.200"
-      bg={shouldBeDisabled ? "gray.100" : "transparent"}
+      borderColor="rgba(148, 163, 184, 0.18)"
+      bg={shouldBeDisabled ? "rgba(148, 163, 184, 0.08)" : "rgba(255, 255, 255, 0.46)"}
       _dark={{
-        borderColor: "gray.600",
-        bg: shouldBeDisabled ? "#364154" : "transparent",
+        borderColor: "rgba(148, 163, 184, 0.18)",
+        bg: shouldBeDisabled
+          ? "rgba(148, 163, 184, 0.08)"
+          : "rgba(148, 163, 184, 0.04)",
       }}
       _checked={{
-        bg: "gray.50",
-        outline: "2px",
-        boxShadow: "outline",
-        outlineColor: "primary.500",
-        borderColor: "transparent",
+        bg: "rgba(37, 99, 235, 0.05)",
+        boxShadow: "0 0 0 1px var(--blue-border)",
+        borderColor: "rgba(37, 99, 235, 0.08)",
+        _dark: {
+          bg: "rgba(125, 211, 252, 0.08)",
+          boxShadow: "0 0 0 1px rgba(125, 211, 252, 0.18)",
+          borderColor: "rgba(125, 211, 252, 0.12)",
+        },
       }}
       {...getCheckboxProps()}
     >
@@ -221,6 +229,7 @@ const RadioCard: FC<
         )}
         <input {...inputProps} />
         <Box
+          className="protocol-config-header"
           w="fll"
           position="relative"
           {...htmlProps}
@@ -229,7 +238,7 @@ const RadioCard: FC<
           _checked={{
             fontWeight: "medium",
             _dark: {
-              bg: "gray.750",
+              bg: "rgba(125, 211, 252, 0.05)",
               borderColor: "transparent",
             },
             "& > svg": {
@@ -270,7 +279,7 @@ const RadioCard: FC<
               inputProps.checked && protocolHasInbound ? "block" : "none"
             }
             as="span"
-            className="checked"
+            className="checked protocol-config-settings"
             color="primary.200"
             position="absolute"
             right="3"
@@ -286,8 +295,8 @@ const RadioCard: FC<
 
           <Text
             fontSize="sm"
-            color={shouldBeDisabled ? "gray.400" : "gray.700"}
-            _dark={{ color: shouldBeDisabled ? "gray.500" : "gray.300" }}
+            color={shouldBeDisabled ? "gray.500" : "gray.700"}
+            _dark={{ color: shouldBeDisabled ? "gray.500" : "gray.100" }}
             {...getLabelProps()}
           >
             {title}
@@ -295,7 +304,7 @@ const RadioCard: FC<
           <Text
             fontWeight="medium"
             color={shouldBeDisabled ? "gray.400" : "gray.600"}
-            _dark={{ color: shouldBeDisabled ? "gray.500" : "gray.400" }}
+            _dark={{ color: shouldBeDisabled ? "gray.500" : "gray.300" }}
             fontSize="xs"
           >
             {description}
@@ -307,9 +316,11 @@ const RadioCard: FC<
         pb={3}
         roundedBottom="5px"
         pt={3}
-        _dark={{ bg: inputProps.checked && "gray.750" }}
+        className="protocol-config-panel"
+        _dark={{ bg: inputProps.checked && "rgba(125, 211, 252, 0.04)" }}
       >
         <VStack
+          className="protocol-config-fields"
           w="full"
           rowGap={2}
           borderStyle="solid"
@@ -318,7 +329,12 @@ const RadioCard: FC<
           pl={3}
           pr={3}
           pt={1.5}
-          _dark={{ bg: "gray.700" }}
+          borderColor="rgba(148, 163, 184, 0.18)"
+          bg="rgba(255, 255, 255, 0.42)"
+          _dark={{
+            bg: "rgba(148, 163, 184, 0.06)",
+            borderColor: "rgba(148, 163, 184, 0.16)",
+          }}
         >
           <VStack alignItems="flex-start" w="full">
             <Text fontSize="sm">{t("inbound")}</Text>

@@ -48,10 +48,10 @@ COPY --from=python-build /usr/local/bin/xray /usr/local/bin/xray
 COPY . /code
 COPY --from=frontend-build /app/dashboard/build /code/app/dashboard/build
 
-RUN ln -s /code/xpert /usr/bin/xpert \
-    && ln -s /code/xpert-cli.py /usr/bin/xpert-cli \
-    && chmod +x /usr/bin/xpert /usr/bin/xpert-cli \
-    && xpert-cli completion install --shell bash
+RUN ln -s /code/flew /usr/bin/flew \
+    && ln -s /code/flew-cli.py /usr/bin/flew-cli \
+    && chmod +x /usr/bin/flew /usr/bin/flew-cli \
+    && flew-cli completion install --shell bash
 
 EXPOSE 8000
 

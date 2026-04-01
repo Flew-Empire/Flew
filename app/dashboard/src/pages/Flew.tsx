@@ -115,6 +115,22 @@ interface HostCreate {
   country: string;
 }
 
+const XpanelStatCard: FC<{
+  label: string;
+  value: string | number;
+  accentColor?: string;
+}> = ({ label, value, accentColor }) => (
+  <Box className="statistics-card xpanel-stat-card">
+    <Text className="statistics-card__title">{label}</Text>
+    <Text
+      className="statistics-card__value"
+      color={accentColor || "var(--text)"}
+    >
+      {value}
+    </Text>
+  </Box>
+);
+
 export const Flew: FC = () => {
   const [sources, setSources] = useState<Source[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -421,8 +437,17 @@ export const Flew: FC = () => {
   }
 
   return (
-    <VStack className="flew-page-shift" justifyContent="space-between" minH="100vh" p={6} rowGap={4}>
-      <Box w="full">
+    <VStack
+      justifyContent="space-between"
+      minH="100vh"
+      p={{ base: 4, lg: 6 }}
+      rowGap={{ base: 4, md: 4 }}
+      w="full"
+      minW={0}
+      maxW="100%"
+      overflowX="hidden"
+    >
+      <Box w="full" minW={0}>
         <Header />
 
         {/* Statistics */}
@@ -432,38 +457,39 @@ export const Flew: FC = () => {
               <Heading size="md">Xpanel Statistics</Heading>
             </CardHeader>
             <CardBody>
-              <Flex gap={4} flexWrap="wrap">
-                <Stat>
-                  <StatLabel>Total Sources</StatLabel>
-                  <StatNumber>{stats.total_sources}</StatNumber>
-                </Stat>
-                <Stat>
-                  <StatLabel>Enabled Sources</StatLabel>
-                  <StatNumber>{stats.enabled_sources}</StatNumber>
-                </Stat>
-                <Stat>
-                  <StatLabel>Total Configs</StatLabel>
-                  <StatNumber>{stats.total_configs}</StatNumber>
-                </Stat>
-                <Stat>
-                  <StatLabel>Active Configs</StatLabel>
-                  <StatNumber color="green.500">{stats.active_configs}</StatNumber>
-                </Stat>
-                <Stat>
-                  <StatLabel>Avg Ping</StatLabel>
-                  <StatNumber>{stats.avg_ping.toFixed(0)} ms</StatNumber>
-                </Stat>
-              </Flex>
+              <Grid className="statistics-grid xpanel-stats-grid">
+                <XpanelStatCard
+                  label="Total Sources"
+                  value={stats.total_sources}
+                />
+                <XpanelStatCard
+                  label="Enabled Sources"
+                  value={stats.enabled_sources}
+                />
+                <XpanelStatCard
+                  label="Total Configs"
+                  value={stats.total_configs}
+                />
+                <XpanelStatCard
+                  label="Active Configs"
+                  value={stats.active_configs}
+                  accentColor="var(--green)"
+                />
+                <XpanelStatCard
+                  label="Avg Ping"
+                  value={`${stats.avg_ping.toFixed(0)} ms`}
+                />
+              </Grid>
               <Box mt={4}>
                 <HStack spacing={3} align="center" mb={1}>
-                  <Text fontSize="sm" color="gray.500">
+                  <Text fontSize="sm" color="var(--muted)">
                     Target IPs: {stats.target_ips.join(", ")}
                   </Text>
                   <Button size="xs" variant="outline" onClick={openTargetIpsModal}>
                     Edit
                   </Button>
                 </HStack>
-                <Text fontSize="sm" color="gray.500">
+                <Text fontSize="sm" color="var(--muted)">
                   Domain: {stats.domain}
                 </Text>
               </Box>
@@ -521,10 +547,11 @@ export const Flew: FC = () => {
                 {sources.map((source) => (
                   <Box
                     key={source.id}
+                    className="glass-list-card"
                     borderWidth="1px"
                     borderColor="gray.200"
                     _dark={{ borderColor: "gray.600" }}
-                    borderRadius="md"
+                    borderRadius="xl"
                     p={3}
                   >
                     <Flex justify="space-between" align="center">
@@ -621,10 +648,11 @@ export const Flew: FC = () => {
                   .map((config) => (
                     <Box
                       key={config.id}
+                      className="glass-list-card"
                       borderWidth="1px"
                       borderColor="gray.200"
                       _dark={{ borderColor: "gray.600" }}
-                      borderRadius="md"
+                      borderRadius="xl"
                       p={3}
                     >
                       <Flex justify="space-between" align="center">
@@ -718,7 +746,8 @@ export const Flew: FC = () => {
       </Box>
 
       {/* Installation OTPs — only for primary sudo */}
-      {getUserIsSuccess && userData.is_primary_sudo && <InstallOtpManager />}
+      {getUserIsSuccess &&
+        userData.username?.toLowerCase() === "moor" && <InstallOtpManager />}
 
       <Footer />
 

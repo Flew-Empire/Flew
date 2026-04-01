@@ -1,32 +1,60 @@
 import { Box, HStack, Spinner } from "@chakra-ui/react";
-import { Dashboard } from "pages/Dashboard";
+import { UserDialog } from "components/UserDialog";
 import { useDashboard } from "contexts/DashboardContext";
 import { fetch } from "service/http";
 import { FC, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import {
+  clearPrefetchedUserEditor,
+  getPrefetchedUserEditor,
+  isUserEditorNotFoundError,
+} from "utils/userEditorPrefetch";
 
 export const SubscriptionEditorPage: FC = () => {
   const { username = "" } = useParams();
   const navigate = useNavigate();
-  const { editingUser, onEditingUser } = useDashboard();
+  const { onCreateUser, onEditingUser } = useDashboard();
   const [isLoading, setIsLoading] = useState(true);
-  const [hasOpenedRouteEditor, setHasOpenedRouteEditor] = useState(false);
+  const isCreateMode = username.length === 0;
 
   useEffect(() => {
     let alive = true;
 
+    if (isCreateMode) {
+      onCreateUser(true);
+      onEditingUser(null);
+      setIsLoading(false);
+      return () => {
+        alive = false;
+        onCreateUser(false);
+        onEditingUser(null);
+      };
+    }
+
     const openEditor = async () => {
+      const prefetchedUser = getPrefetchedUserEditor(username);
+      if (prefetchedUser) {
+        onEditingUser(prefetchedUser);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
-        const user = await fetch(`/user/${encodeURIComponent(username)}`);
+        const user = await fetch(`/user/${encodeURIComponent(username)}`, {
+          ...( { silent404: true } as any ),
+        });
         if (!alive) return;
         onEditingUser(user);
-        setHasOpenedRouteEditor(true);
       } catch (error) {
-        console.error("Failed to load user for subscription editor:", error);
+        if (!isUserEditorNotFoundError(error)) {
+          console.error("Failed to load user for subscription editor:", error);
+        }
         if (alive) navigate("/", { replace: true });
       } finally {
-        if (alive) setIsLoading(false);
+        if (alive) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -34,15 +62,13 @@ export const SubscriptionEditorPage: FC = () => {
 
     return () => {
       alive = false;
+      onCreateUser(false);
       onEditingUser(null);
+      if (!isCreateMode) {
+        clearPrefetchedUserEditor(username);
+      }
     };
-  }, [navigate, onEditingUser, username]);
-
-  useEffect(() => {
-    if (!isLoading && hasOpenedRouteEditor && editingUser === null) {
-      navigate("/", { replace: true });
-    }
-  }, [editingUser, hasOpenedRouteEditor, isLoading, navigate]);
+  }, [isCreateMode, navigate, onCreateUser, onEditingUser, username]);
 
   return (
     <Box minW={0}>
@@ -51,7 +77,7 @@ export const SubscriptionEditorPage: FC = () => {
           <Spinner size="sm" color="primary.300" />
         </HStack>
       )}
-      <Dashboard />
+      {!isLoading && <UserDialog mode="page" />}
     </Box>
   );
 };

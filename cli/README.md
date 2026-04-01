@@ -42,7 +42,7 @@ $ admin [OPTIONS] COMMAND [ARGS]...
 
 Creates an admin
 
-Password can also be set using the `XPERT_ADMIN_PASSWORD` environment variable for non-interactive usages.
+Password can also be set using the `FLEW_ADMIN_PASSWORD` environment variable for non-interactive usages.
 
 **Usage**:
 
@@ -143,7 +143,7 @@ $ captcha [OPTIONS]
 
 **Options**:
 
-* `--env TEXT`: Env file path. [default: /opt/xpert/.env]
+* `--env TEXT`: Env file path. [default: /opt/flew/.env]
 * `--help`: Show this message and exit.
 
 ## `completion`

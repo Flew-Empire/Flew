@@ -13,7 +13,7 @@ def create_install_download_token(
     *,
     edition: str,
     filename: str,
-    product: str = "xpert",
+    product: str = "flew",
     ttl_seconds: Optional[int] = None,
 ) -> Tuple[str, datetime]:
     ttl = max(60, int(ttl_seconds or INSTALL_DOWNLOAD_TOKEN_TTL_SECONDS or 900))

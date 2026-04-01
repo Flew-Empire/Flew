@@ -33,6 +33,7 @@ export const RevokeSubscriptionModal: FC<RevokeSubscriptionModalProps> = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const onClose = () => {
+    if (loading) return;
     useDashboard.setState({ revokeSubscriptionUser: null });
   };
   const onReset = () => {
@@ -63,7 +64,14 @@ export const RevokeSubscriptionModal: FC<RevokeSubscriptionModalProps> = () => {
     }
   };
   return (
-    <Modal isCentered isOpen={!!user} onClose={onClose} size="sm">
+    <Modal
+      isCentered
+      isOpen={!!user}
+      onClose={onClose}
+      size="sm"
+      closeOnOverlayClick={!loading}
+      closeOnEsc={!loading}
+    >
       <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
       <ModalContent mx="3">
         <ModalHeader pt={6}>
@@ -90,7 +98,14 @@ export const RevokeSubscriptionModal: FC<RevokeSubscriptionModalProps> = () => {
           )}
         </ModalBody>
         <ModalFooter display="flex">
-          <Button size="sm" onClick={onClose} mr={3} w="full" variant="outline">
+          <Button
+            size="sm"
+            onClick={onClose}
+            mr={3}
+            w="full"
+            variant="outline"
+            isDisabled={loading}
+          >
             {t("cancel")}
           </Button>
           <Button
@@ -99,6 +114,8 @@ export const RevokeSubscriptionModal: FC<RevokeSubscriptionModalProps> = () => {
             colorScheme="blue"
             onClick={onReset}
             leftIcon={loading ? <Spinner size="xs" /> : undefined}
+            isLoading={loading}
+            isDisabled={!user || loading}
           >
             {t("revoke")}
           </Button>

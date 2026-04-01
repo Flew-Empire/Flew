@@ -27,7 +27,7 @@
         {
             "tag": "VLESS WS",
             "listen": "0.0.0.0",
-            "port": 2080,
+            "port": 80,
             "protocol": "vless",
             "settings": {
                 "clients": [],
@@ -45,6 +45,40 @@
                 "destOverride": [
                     "http",
                     "tls"
+                ]
+            }
+        },
+        {
+            "tag": "VLESS-gRPC",
+            "listen": "0.0.0.0",
+            "port": 2025,
+            "protocol": "vless",
+            "settings": {
+                "clients": [],
+                "decryption": "none"
+            },
+            "streamSettings": {
+                "network": "grpc",
+                "security": "none",
+                "grpcSettings": {
+                    "serviceName": "yakupjm",
+                    "idle_timeout": 60,
+                    "health_check_timeout": 20,
+                    "permit_without_stream": true,
+                    "initial_windows_size": 1048576,
+                    "multiMode": true
+                },
+                "sockopt": {
+                    "tcpNoDelay": true,
+                    "tcpFastOpen": true
+                }
+            },
+            "sniffing": {
+                "enabled": true,
+                "destOverride": [
+                    "http",
+                    "tls",
+                    "quic"
                 ]
             }
         },

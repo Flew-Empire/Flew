@@ -3,7 +3,7 @@ import os
 
 from app import scheduler
 from app.db import GetDB
-from app.xpert.panel_sync_service import panel_sync_service
+from app.flew.panel_sync_service import panel_sync_service
 
 logger = logging.getLogger(__name__)
 

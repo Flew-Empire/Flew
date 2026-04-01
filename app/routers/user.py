@@ -20,8 +20,8 @@ from app.models.user import (
 )
 from app.models.proxy import ProxySettings, ProxyTypes
 from app.utils import report, responses
-from app.xpert.admin_user_traffic_limit_service import get_admin_user_traffic_limit_bytes
-from app.xpert.panel_sync_service import panel_sync_service, build_user_clone_payload
+from app.flew.admin_user_traffic_limit_service import get_admin_user_traffic_limit_bytes
+from app.flew.panel_sync_service import panel_sync_service, build_user_clone_payload
 
 router = APIRouter(tags=["User"], prefix="/api", responses={401: responses._401})
 
@@ -118,6 +118,10 @@ def _sync_many_users_reset(usernames: List[str]) -> None:
             logger.exception("Panel bulk reset sync failed for user %s", username)
 
 
+def _get_action_actor(db: Session, admin: Admin):
+    return crud.get_admin(db, getattr(admin, "username", "")) or admin
+
+
 
 @router.post("/user", response_model=UserResponse, responses={400: responses._400, 409: responses._409})
 def add_user(
@@ -155,18 +159,18 @@ def add_user(
     _enforce_admin_limits(db, dbadmin, add_users=1)
     _apply_admin_user_traffic_cap(new_user, dbadmin.username if dbadmin else None)
 
-    # Force all active protocols/inbounds for every newly created user.
-    active_protocols = [
-        ProxyTypes(proto)
-        for proto, items in xray.config.inbounds_by_protocol.items()
-        if items
-    ]
-    for proxy_type in active_protocols:
-        if proxy_type not in new_user.proxies:
-            new_user.proxies[proxy_type] = ProxySettings.from_dict(proxy_type, {})
+    # Keep only user-selected protocols, but ensure each selected protocol has
+    # a default inbound set if the client omitted inbound tags.
+    new_user.inbounds = {
+        proxy_type: tags
+        for proxy_type, tags in new_user.inbounds.items()
+        if proxy_type in new_user.proxies
+    }
+    for proxy_type in list(new_user.proxies.keys()):
         if not new_user.inbounds.get(proxy_type):
             new_user.inbounds[proxy_type] = [
-                inbound["tag"] for inbound in xray.config.inbounds_by_protocol.get(proxy_type, [])
+                inbound["tag"]
+                for inbound in xray.config.inbounds_by_protocol.get(proxy_type, [])
             ]
 
     try:
@@ -181,9 +185,10 @@ def add_user(
     user = UserResponse.model_validate(dbuser)
     report.user_created(user=user, user_id=dbuser.id, by=admin, user_admin=dbuser.admin)
     try:
+        actor = _get_action_actor(db, admin)
         crud.create_admin_action_log(
             db=db,
-            admin=dbadmin,
+            admin=actor,
             action="user.create",
             target_type="user",
             target_username=user.username,
@@ -192,7 +197,7 @@ def add_user(
         if user.data_limit is not None and int(user.data_limit) > 0:
             crud.create_admin_action_log(
                 db=db,
-                admin=dbadmin,
+                admin=actor,
                 action="user.traffic_limit_set",
                 target_type="user",
                 target_username=user.username,
@@ -297,7 +302,7 @@ def modify_user(
             changes["data_limit"] = {"from": old_data_limit, "to": user.data_limit}
         if old_note != user.note:
             changes["note"] = {"from": bool(old_note), "to": bool(user.note)}
-        actor = crud.get_admin(db, admin.username)
+        actor = _get_action_actor(db, admin)
         crud.create_admin_action_log(
             db=db,
             admin=actor,
@@ -551,8 +556,12 @@ def active_next_plan(
     bg: BackgroundTasks,
     db: Session = Depends(get_db),
     dbuser: UserResponse = Depends(get_validated_user),
+    admin: Admin = Depends(Admin.get_current),
 ):
     """Reset user by next plan"""
+    before_used = getattr(dbuser, "used_traffic", None)
+    before_expire = getattr(dbuser, "expire", None)
+    before_data_limit = getattr(dbuser, "data_limit", None)
     dbuser = crud.reset_user_by_next(db=db, dbuser=dbuser)
 
     if (dbuser is None or dbuser.next_plan is None):
@@ -568,6 +577,24 @@ def active_next_plan(
     bg.add_task(
         report.user_data_reset_by_next, user=user, user_admin=dbuser.admin,
     )
+
+    try:
+        crud.create_admin_action_log(
+            db=db,
+            admin=_get_action_actor(db, admin),
+            action="user.active_next_plan",
+            target_type="user",
+            target_username=user.username,
+            meta={
+                "used_traffic_before": before_used,
+                "expire_from": before_expire,
+                "expire_to": user.expire,
+                "data_limit_from": before_data_limit,
+                "data_limit_to": user.data_limit,
+            },
+        )
+    except Exception:
+        pass
 
     try:
         clone_payload = build_user_clone_payload(user.model_dump(mode="json"))
@@ -616,6 +643,7 @@ def set_owner(
     admin: Admin = Depends(Admin.check_sudo_admin),
 ):
     """Set a new owner (admin) for a user."""
+    old_owner = getattr(getattr(dbuser, "admin", None), "username", None)
     new_admin = crud.get_admin(db, username=admin_username)
     if not new_admin:
         raise HTTPException(status_code=404, detail="Admin not found")
@@ -629,6 +657,18 @@ def set_owner(
     user = UserResponse.model_validate(dbuser)
 
     logger.info(f'{user.username}"owner successfully set to{admin.username}')
+
+    try:
+        crud.create_admin_action_log(
+            db=db,
+            admin=_get_action_actor(db, admin),
+            action="user.set_owner",
+            target_type="user",
+            target_username=user.username,
+            meta={"old_owner": old_owner, "new_owner": new_admin.username},
+        )
+    except Exception:
+        pass
 
     return user
 
@@ -681,6 +721,7 @@ def delete_expired_users(
         )
 
     crud.remove_users(db, expired_users)
+    actor = _get_action_actor(db, admin)
 
     for removed_user in removed_users:
         logger.info(f'User "{removed_user}" deleted')
@@ -692,6 +733,17 @@ def delete_expired_users(
             ),
             by=admin,
         )
+        try:
+            crud.create_admin_action_log(
+                db=db,
+                admin=actor,
+                action="user.delete",
+                target_type="user",
+                target_username=removed_user,
+                meta={"source": "expired_cleanup"},
+            )
+        except Exception:
+            pass
         bg.add_task(_sync_user_delete, removed_user)
 
     return removed_users

@@ -181,16 +181,16 @@ class XRayConfig(dict):
             # stream settings
             if stream := inbound.get('streamSettings'):
                 net = stream.get('network', 'tcp')
-                net_settings = stream.get(f"{net}Settings", {})
+                net_settings = stream.get(f"{net}Settings") or {}
                 security = stream.get("security")
-                tls_settings = stream.get(f"{security}Settings")
+                tls_settings = stream.get(f"{security}Settings") or {}
 
                 if settings['is_fallback'] is True:
                     # probably this is a fallback
                     security = self._fallbacks_inbound.get(
                         'streamSettings', {}).get('security')
                     tls_settings = self._fallbacks_inbound.get(
-                        'streamSettings', {}).get(f"{security}Settings", {})
+                        'streamSettings', {}).get(f"{security}Settings") or {}
 
                 settings['network'] = net
 

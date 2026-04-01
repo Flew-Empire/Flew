@@ -43,11 +43,9 @@ export const JsonEditor = forwardRef<HTMLDivElement, JSONEditorProps>(
       <Box
         ref={ref}
         border="1px solid"
-        borderColor="gray.300"
-        _dark={{
-          borderColor: "gray.500",
-        }}
-        borderRadius={5}
+        borderColor="var(--border)"
+        borderRadius="14px"
+        overflow="hidden"
         h="full"
       >
         <Box height="full" ref={jsonEditorContainer} />

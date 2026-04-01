@@ -1,3 +1,5 @@
+import json
+import os
 import time
 import jwt
 from base64 import b64decode, b64encode
@@ -6,9 +8,11 @@ from functools import lru_cache
 from hashlib import sha256
 from math import ceil
 from typing import Union
+from urllib.parse import urlparse
 
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from config import JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+from config import JWT_ACCESS_TOKEN_EXPIRE_MINUTES, XRAY_SUBSCRIPTION_PATH
 
 
 @lru_cache(maxsize=None)
@@ -67,8 +71,93 @@ def create_subscription_token(username: str) -> str:
     return data_final
 
 
+@lru_cache(maxsize=1)
+def _get_subscription_cipher():
+    key = sha256((get_secret_key() + ":subscription-link").encode("utf-8")).digest()
+    return AESGCM(key)
+
+
+def _b64url_encode(data: bytes) -> str:
+    return b64encode(data, altchars=b"-_").decode("utf-8").rstrip("=")
+
+
+def _b64url_decode(data: str) -> bytes:
+    return b64decode(
+        data.encode("utf-8") + b"=" * (-len(data.encode("utf-8")) % 4),
+        altchars=b"-_",
+        validate=True,
+    )
+
+
+def create_subscription_opaque_token(username: str) -> str:
+    payload = json.dumps(
+        {"sub": username, "iat": int(time.time())},
+        separators=(",", ":"),
+    ).encode("utf-8")
+    nonce = os.urandom(12)
+    encrypted = _get_subscription_cipher().encrypt(nonce, payload, b"flew-sub")
+    compact = _b64url_encode(nonce + encrypted)
+    split_at = 10 if len(compact) > 24 else max(6, len(compact) // 2)
+    return f"{compact[:split_at]}/{compact[split_at:]}"
+
+
+def _get_opaque_subscription_payload(token: str) -> Union[dict, None]:
+    try:
+        compact = "".join(part.strip() for part in str(token or "").split("/") if part.strip())
+        if len(compact) < 24:
+            return
+        raw = _b64url_decode(compact)
+        if len(raw) <= 12:
+            return
+        nonce, encrypted = raw[:12], raw[12:]
+        payload_raw = _get_subscription_cipher().decrypt(nonce, encrypted, b"flew-sub")
+        payload = json.loads(payload_raw.decode("utf-8"))
+        username = payload.get("sub")
+        issued_at = int(payload.get("iat"))
+        if not username or issued_at <= 0:
+            return
+        return {"username": username, "created_at": datetime.utcfromtimestamp(issued_at)}
+    except Exception:
+        return
+
+
+def extract_subscription_token_from_url(url: str) -> Union[str, None]:
+    try:
+        parsed = urlparse((url or "").strip())
+        parts = [part for part in parsed.path.split("/") if part]
+        if not parts:
+            return
+
+        suffixes = {"info", "usage", "sing-box", "clash-meta", "clash", "outline", "v2ray", "v2ray-json"}
+        for idx, part in enumerate(parts):
+            if part != XRAY_SUBSCRIPTION_PATH:
+                continue
+
+            tail = parts[idx + 1 :]
+            if not tail:
+                return
+            if len(tail) >= 2 and tail[1] not in suffixes:
+                return f"{tail[0]}/{tail[1]}"
+            return tail[0]
+    except Exception:
+        return
+    return
+
+
+def get_subscription_payload_from_url(url: str) -> Union[dict, None]:
+    token = extract_subscription_token_from_url(url)
+    if not token:
+        return
+    return get_subscription_payload(token)
+
+
 def get_subscription_payload(token: str) -> Union[dict, None]:
     try:
+        if "/" in (token or ""):
+            payload = _get_opaque_subscription_payload(token)
+            if payload:
+                return payload
+
         if len(token) < 15:
             return
 

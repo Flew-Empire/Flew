@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENV_FILE="${1:-/opt/xpert/.env}"
-DEFAULT_DOMAIN="xpert.mediatmshow.online"
+ENV_FILE="${1:-/opt/flew/.env}"
+DEFAULT_DOMAIN="merkez.mediatmshow.online"
 VENDOR="turnstile"
 
 if [ ! -f "$ENV_FILE" ]; then
@@ -54,13 +54,13 @@ upsert_env "LOGIN_CAPTCHA_SECRET" "$SECRET_KEY"
 cat <<DONE
 
 Captcha settings saved to $ENV_FILE
-Remember: the edition must include the "captcha" feature (custom edition or XPERT_FEATURES).
+Remember: the edition must include the "captcha" feature (X edition or FLEW_FEATURES).
 DONE
 
-read -r -p "Restart xpert now? [y/N]: " RESTART
+read -r -p "Restart flew now? [y/N]: " RESTART
 if [[ "${RESTART}" =~ ^[Yy]$ ]]; then
-  systemctl restart xpert
-  echo "xpert restarted."
+  systemctl restart flew
+  echo "flew restarted."
 else
   echo "Skipped restart."
 fi

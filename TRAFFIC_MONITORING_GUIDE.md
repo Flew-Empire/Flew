@@ -1,15 +1,15 @@
-# Руководство по системе мониторинга трафика Xpert Panel
+# Руководство по системе мониторинга трафика Flew Panel
 
 ## 🎯 Обзор
 
-Система мониторинга трафика позволяет отслеживать использование **внешних VPN серверов** через Xpert Panel с последующей интеграцией в Xpert UI.
+Система мониторинга трафика позволяет отслеживать использование **внешних VPN серверов** через Flew Panel с последующей интеграцией в Flew UI.
 
 ## ✅ Возможности
 
 - ✅ **Отслеживание трафика** через чужие сервера (не ваши)
 - ✅ **Статистика в ГБ** по пользователям и серверам
 - ✅ **Webhook система** для приема данных от клиентов
-- ✅ **Интеграция с Xpert UI** через API
+- ✅ **Интеграция с Flew UI** через API
 - ✅ **Middleware логирование** подписных запросов
 - ✅ **Очистка старых данных** по требованию
 - ✅ **SQLite база** с индексами для быстрой работы
@@ -21,17 +21,17 @@
 Убедитесь что в `.env` файле есть:
 
 ```env
-XPERT_TRAFFIC_TRACKING_ENABLED=True
-XPERT_TRAFFIC_DB_PATH=data/traffic_stats.db
-XPERT_TRAFFIC_RETENTION_DAYS=0
-XPERT_DOMAIN=your-domain.com
+FLEW_TRAFFIC_TRACKING_ENABLED=True
+FLEW_TRAFFIC_DB_PATH=data/traffic_stats.db
+FLEW_TRAFFIC_RETENTION_DAYS=0
+FLEW_DOMAIN=your-domain.com
 ```
 
 ### 2. Перезапуск панели
 
 ```bash
-# Перезапустите Xpert Panel для загрузки нового middleware
-sudo systemctl restart xpert
+# Перезапустите Flew Panel для загрузки нового middleware
+sudo systemctl restart flew
 # или
 python3 main.py
 ```
@@ -40,7 +40,7 @@ python3 main.py
 
 ```bash
 # Тестирование системы
-cd /opt/xpert
+cd /opt/flew
 python3 test_traffic_simple.py
 ```
 
@@ -48,7 +48,7 @@ python3 test_traffic_simple.py
 
 ### 🔗 Webhook для приема трафика
 
-**Эндпоинт:** `POST /api/xpert/traffic-webhook`
+**Эндпоинт:** `POST /api/flew/traffic-webhook`
 
 **Тело запроса:**
 ```json
@@ -72,7 +72,7 @@ python3 test_traffic_simple.py
 
 ### 👤 Статистика пользователя
 
-**Эндпоинт:** `GET /api/xpert/traffic-stats/{user_token}?days=30`
+**Эндпоинт:** `GET /api/flew/traffic-stats/{user_token}?days=30`
 
 **Ответ:**
 ```json
@@ -97,7 +97,7 @@ python3 test_traffic_simple.py
 
 ### 🌍 Глобальная статистика
 
-**Эндпоинт:** `GET /api/xpert/traffic-stats/global?days=30`
+**Эндпоинт:** `GET /api/flew/traffic-stats/global?days=30`
 
 **Ответ:**
 ```json
@@ -119,11 +119,11 @@ python3 test_traffic_simple.py
 }
 ```
 
-### 🖥️ Интеграция с Xpert UI
+### 🖥️ Интеграция с Flew UI
 
-**Эндпоинт:** `GET /api/xpert/xpert-traffic-stats?days=30`
+**Эндпоинт:** `GET /api/flew/flew-traffic-stats?days=30`
 
-**Ответ (совместимый с Xpert):**
+**Ответ (совместимый с Flew):**
 ```json
 {
     "users_traffic": {
@@ -134,7 +134,7 @@ python3 test_traffic_simple.py
         "total_protocols": 4,
         "period_days": 30,
         "external_servers": true,
-        "integration_type": "xpert",
+        "integration_type": "flew",
         "data_source": "traffic_monitoring_system"
     }
 }
@@ -145,7 +145,7 @@ python3 test_traffic_simple.py
 ### Базовая подписка
 
 ```
-GET /api/xpert/sub?user_token=user123
+GET /api/flew/sub?user_token=user123
 ```
 
 **Заголовки ответа:**
@@ -153,15 +153,15 @@ GET /api/xpert/sub?user_token=user123
 Content-Type: text/plain; charset=utf-8
 Profile-Update-Interval: 1
 Subscription-Userinfo: upload=64000000; download=128000000; total=192000000; expire=0
-Profile-Title: Xpert Panel
-Traffic-Webhook: https://your-domain.com/api/xpert/traffic-webhook
+Profile-Title: Flew Panel
+Traffic-Webhook: https://your-domain.com/api/flew/traffic-webhook
 User-Token: user123
 ```
 
 ### Direct Configurations подписка
 
 ```
-GET /api/xpert/direct-configs/sub?user_token=user123
+GET /api/flew/direct-configs/sub?user_token=user123
 ```
 
 **Заголовки ответа:**
@@ -169,8 +169,8 @@ GET /api/xpert/direct-configs/sub?user_token=user123
 Content-Type: text/plain; charset=utf-8
 Profile-Update-Interval: 1
 Subscription-Userinfo: upload=64000000; download=128000000; total=192000000; expire=0
-Profile-Title: Xpert Direct
-Traffic-Webhook: https://your-domain.com/api/xpert/traffic-webhook
+Profile-Title: Flew Direct
+Traffic-Webhook: https://your-domain.com/api/flew/traffic-webhook
 User-Token: user123
 ```
 
@@ -182,7 +182,7 @@ User-Token: user123
 import requests
 
 # Получение подписки
-response = requests.get("https://your-domain.com/api/xpert/sub?user_token=user123")
+response = requests.get("https://your-domain.com/api/flew/sub?user_token=user123")
 webhook_url = response.headers.get('Traffic-Webhook')
 user_token = response.headers.get('User-Token')
 
@@ -206,18 +206,18 @@ requests.post(webhook_url, json=traffic_data)
 # Мониторинг трафика для пользователя
 
 USER_TOKEN="user123"
-API_BASE="https://your-domain.com/api/xpert"
+API_BASE="https://your-domain.com/api/flew"
 
 # Получение статистики
 curl -s "${API_BASE}/traffic-stats/${USER_TOKEN}?days=7" | jq '.'
 ```
 
-### 3. Интеграция с Xpert UI
+### 3. Интеграция с Flew UI
 
 ```javascript
-// JavaScript для Xpert UI
+// JavaScript для Flew UI
 async function fetchExternalTrafficStats() {
-    const response = await fetch('/api/xpert/xpert-traffic-stats?days=30');
+    const response = await fetch('/api/flew/flew-traffic-stats?days=30');
     const data = await response.json();
     
     if (data.users_traffic.external_servers) {
@@ -233,7 +233,7 @@ async function fetchExternalTrafficStats() {
 
 ```bash
 # Удаление записей старше 90 дней
-curl -X POST "https://your-domain.com/api/xpert/traffic-stats/cleanup?days=90"
+curl -X POST "https://your-domain.com/api/flew/traffic-stats/cleanup?days=90"
 ```
 
 **Ответ:**
@@ -248,7 +248,7 @@ curl -X POST "https://your-domain.com/api/xpert/traffic-stats/cleanup?days=90"
 ### Информация о базе данных
 
 ```bash
-curl -s "https://your-domain.com/api/xpert/traffic-stats/database/info" | jq '.'
+curl -s "https://your-domain.com/api/flew/traffic-stats/database/info" | jq '.'
 ```
 
 **Ответ:**
@@ -283,14 +283,14 @@ curl -s "https://your-domain.com/api/xpert/traffic-stats/database/info" | jq '.'
 ### Структура файлов
 
 ```
-app/xpert/
+app/flew/
 ├── traffic_service.py     # Основной сервис статистики
 ├── service.py           # Агрегация подписок
-├── xpert_integration.py  # Интеграция с Xpert
+├── flew_integration.py  # Интеграция с Flew
 └── direct_config_service.py # Direct конфигурации
 
 app/routers/
-└── xpert.py            # API эндпоинты + middleware
+└── flew.py            # API эндпоинты + middleware
 
 config.py               # Конфигурационные переменные
 ```
@@ -299,7 +299,7 @@ config.py               # Конфигурационные переменные
 
 ```bash
 # Запуск тестов
-cd /opt/xpert
+cd /opt/flew
 python3 test_traffic_simple.py
 
 # Тестирование API (требует запущенного сервера)
@@ -333,15 +333,15 @@ python3 test_traffic_system.py
    ```
 
 2. **Webhook не работает**
-   - Проверьте `XPERT_DOMAIN` в конфигурации
+   - Проверьте `FLEW_DOMAIN` в конфигурации
    - Убедитесь что порт 8000 доступен
 
 3. **Статистика не накапливается**
    - Проверьте что клиенты отправляют данные на webhook
-   - Проверьте логи Xpert Panel
+   - Проверьте логи Flew Panel
 
-4. **Интеграция с Xpert не работает**
-   - Проверьте эндпоинт `/api/xpert/xpert-traffic-stats`
+4. **Интеграция с Flew не работает**
+   - Проверьте эндпоинт `/api/flew/flew-traffic-stats`
    - Убедитесь что `external_servers: true`
 
 ## 📞 Поддержка
@@ -349,21 +349,21 @@ python3 test_traffic_system.py
 ### Логирование
 
 ```bash
-# Просмотр логов Xpert Panel
-sudo journalctl -u xpert -f
+# Просмотр логов Flew Panel
+sudo journalctl -u flew -f
 
 # Или если запущено вручную
-tail -f /var/log/xpert.log
+tail -f /var/log/flew.log
 ```
 
 ### Отладка
 
 ```bash
 # Проверка конфигурации
-cd /opt/xpert
+cd /opt/flew
 python3 -c "
-from config import XPERT_TRAFFIC_TRACKING_ENABLED
-print('Traffic tracking enabled:', XPERT_TRAFFIC_TRACKING_ENABLED)
+from config import FLEW_TRAFFIC_TRACKING_ENABLED
+print('Traffic tracking enabled:', FLEW_TRAFFIC_TRACKING_ENABLED)
 "
 ```
 
@@ -371,4 +371,4 @@ print('Traffic tracking enabled:', XPERT_TRAFFIC_TRACKING_ENABLED)
 
 **Система мониторинга трафика готова к использованию! 🎉**
 
-Теперь вы можете отслеживать использование трафика через внешние VPN серверы и отображать статистику в Xpert UI.
+Теперь вы можете отслеживать использование трафика через внешние VPN серверы и отображать статистику в Flew UI.
