@@ -1,1 +1,0 @@
-import{C as t}from"./CryptoLinkModal.1a9c4fff.js";import{a as o}from"./index.62ee154d.js";import"./chunk-MPFPK3CX.c11d6fbd.js";import"./chunk-OEQDSMWZ.b841c322.js";import"./chunk-YI7XFFAC.ae6f0874.js";const m=()=>o(t,{mode:"page",view:"settings"});export{m as CryptoLinkSettingsPage,m as default};
