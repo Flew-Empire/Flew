@@ -1,9 +1,12 @@
 import asyncio
 import json
+import logging
 import time
 
 import commentjson
 from fastapi import APIRouter, Depends, HTTPException, WebSocket
+
+logger = logging.getLogger(__name__)
 from starlette.websockets import WebSocketDisconnect
 
 from app import xray
@@ -147,8 +150,12 @@ def modify_core_config(
 
     try:
         config = XRayConfig(payload, api_port=xray.config.api_port)
-    except ValueError as err:
+    except (ValueError, TypeError, AttributeError, KeyError) as err:
+        logger.exception("Failed to parse core config payload")
         raise HTTPException(status_code=400, detail=str(err))
+    except Exception as err:
+        logger.exception("Unexpected error parsing core config payload")
+        raise HTTPException(status_code=400, detail=f"Invalid config: {err}")
 
     xray.config = config
     with open(XRAY_JSON, "w") as f:

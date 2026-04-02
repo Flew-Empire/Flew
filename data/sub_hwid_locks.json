@@ -9,13 +9,6 @@
         "236345784568"
       ]
     },
-    "Bdogany27": {
-      "updated_at": "2026-03-27T20:42:01.542650",
-      "max_unique_hwid": 1,
-      "seen_hwids": [
-        "e7b91aef5d16aa94"
-      ]
-    },
     "Meylistest": {
       "updated_at": "2026-03-29T18:49:37.792480",
       "max_unique_hwid": 1,
@@ -88,8 +81,11 @@
       "max_unique_hwid": 1
     },
     "N_Dowlet": {
-      "updated_at": "2026-03-31T15:51:57.151801",
-      "max_unique_hwid": 1
+      "updated_at": "2026-04-02T05:10:50.946782",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "f98bbc0362bf8664"
+      ]
     },
     "N_Enejan": {
       "updated_at": "2026-03-31T17:30:32.820277",
@@ -113,7 +109,14 @@
       ]
     },
     "G_Nazira": {
-      "updated_at": "2026-03-31T19:22:25.965769",
+      "updated_at": "2026-04-01T15:27:59.561538",
+      "max_unique_hwid": 1,
+      "seen_hwids": [
+        "c5703043815e32d4"
+      ]
+    },
+    "G_Guvanc": {
+      "updated_at": "2026-04-01T15:29:42.375953",
       "max_unique_hwid": 1
     }
   }
