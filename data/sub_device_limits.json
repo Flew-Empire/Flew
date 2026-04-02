@@ -3668,16 +3668,16 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-03-30T17:49:22.839147",
-          "last_seen_at": "2026-04-02T11:41:04.115289",
+          "last_seen_at": "2026-04-02T12:52:37.420258",
           "first_ip": "93.171.220.97",
-          "last_ip": "109.172.95.95",
+          "last_ip": "93.171.220.97",
           "user_agent": "Happ/3.16.0/Android/1741613",
-          "seen_count": 23,
-          "updated_at": "2026-04-02T11:41:04.115289",
+          "seen_count": 27,
+          "updated_at": "2026-04-02T12:52:37.420258",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T11:41:04.115289"
+      "updated_at": "2026-04-02T12:52:37.420258"
     },
     "Rahymsamsung": {
       "limit": 1,
@@ -3880,16 +3880,16 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-03-31T02:13:53.748382",
-          "last_seen_at": "2026-04-02T10:46:30.391688",
+          "last_seen_at": "2026-04-02T12:54:51.508883",
           "first_ip": "185.69.185.64",
-          "last_ip": "93.171.220.198",
+          "last_ip": "109.172.95.95",
           "user_agent": "Happ/3.16.0/Android/1741613",
-          "seen_count": 22,
-          "updated_at": "2026-04-02T10:46:30.391688",
+          "seen_count": 23,
+          "updated_at": "2026-04-02T12:54:51.508883",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T10:46:30.391688"
+      "updated_at": "2026-04-02T12:54:51.508883"
     },
     "Kullyev": {
       "limit": 1,
@@ -3904,12 +3904,12 @@
           "device_type": "desktop",
           "status": "allowed",
           "first_seen_at": "2026-03-31T15:40:59.755568",
-          "last_seen_at": "2026-04-02T10:42:23.348689",
+          "last_seen_at": "2026-04-02T13:00:29.307406",
           "first_ip": "95.85.98.141",
-          "last_ip": "95.85.98.93",
+          "last_ip": "109.172.95.95",
           "user_agent": "v2box/5.3.4",
-          "seen_count": 16,
-          "updated_at": "2026-04-02T10:42:23.348689",
+          "seen_count": 17,
+          "updated_at": "2026-04-02T13:00:29.307406",
           "force_banned": false
         },
         "id:372b2353ba76a9da": {
@@ -3930,7 +3930,7 @@
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T10:42:23.348689"
+      "updated_at": "2026-04-02T13:00:29.307406"
     },
     "Jahan": {
       "limit": 1,
@@ -4226,16 +4226,16 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-03-31T11:54:30.731518",
-          "last_seen_at": "2026-04-02T10:11:56.508388",
+          "last_seen_at": "2026-04-02T12:52:40.146604",
           "first_ip": "185.69.185.165",
           "last_ip": "185.69.185.170",
           "user_agent": "Happ/3.16.0/Android/1741613",
-          "seen_count": 20,
-          "updated_at": "2026-04-02T10:11:56.508388",
+          "seen_count": 21,
+          "updated_at": "2026-04-02T12:52:40.146604",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T10:11:56.508388"
+      "updated_at": "2026-04-02T12:52:40.146604"
     },
     "Instatestik": {
       "limit": 1,
@@ -4589,7 +4589,7 @@
           "model": "iPhone 15 Pro",
           "os": "iOS",
           "device_type": "phone",
-          "status": "allowed",
+          "status": "banned",
           "first_seen_at": "2026-03-31T15:43:13.118936",
           "last_seen_at": "2026-04-02T12:07:24.114337",
           "first_ip": "185.69.186.43",
@@ -4606,18 +4606,18 @@
           "model": "iPad Pro (11-inch) (3rd generation)",
           "os": "iPadOS",
           "device_type": "phone",
-          "status": "banned",
+          "status": "allowed",
           "first_seen_at": "2026-03-31T15:49:35.506050",
-          "last_seen_at": "2026-04-02T09:04:07.767283",
+          "last_seen_at": "2026-04-02T13:00:22.030360",
           "first_ip": "95.85.100.59",
           "last_ip": "109.172.95.95",
           "user_agent": "Happ/4.6.0/ios/2603181556604",
-          "seen_count": 12,
-          "updated_at": "2026-04-02T09:04:07.767283",
+          "seen_count": 14,
+          "updated_at": "2026-04-02T13:00:22.030360",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T12:07:24.114337"
+      "updated_at": "2026-04-02T13:00:22.030360"
     },
     "N_Eje": {
       "devices": {},
