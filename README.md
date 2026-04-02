@@ -17,8 +17,6 @@ Flew Free is the free edition of the Flew panel by Flew Empire.
 - Admin Accounts
 - Admin Manager
 
-> **Note:** XPanel and the paid modules are not included in this edition.
-
 ---
 
 ## Install
