@@ -4,6 +4,7 @@ set -euo pipefail
 VERSION="1.0.0"
 INSTALL_DIR="/opt/flew"
 PANEL_DOMAIN=""
+PUBLIC_IP=""
 ADMIN_USER="admin"
 ADMIN_PASSWORD=""
 ADMIN_EMAIL=""
@@ -18,6 +19,7 @@ Usage: $0 [OPTIONS]
 
 OPTIONS:
   --domain DOMAIN          Panel domain (e.g., panel.example.com)
+  --public-ip IP          Public server IP (for --skip-nginx mode)
   --admin ADMIN           Admin username (default: admin)
   --password PASSWORD     Admin password
   --email EMAIL           Admin email (for Let's Encrypt)
@@ -30,17 +32,15 @@ EXAMPLES:
   # With domain and email
   $0 --domain panel.example.com --admin admin --password 'mysecurepass' --email admin@example.com
 
-  # Without email
-  $0 --domain panel.example.com --admin admin --password 'mysecurepass' --skip-email
-
-  # Without domain (HTTP only, no nginx)
-  $0 --admin admin --password 'mysecurepass' --skip-nginx
+  # Without domain (HTTP only, no nginx) - specify public IP
+  $0 --admin admin --password 'mysecurepass' --public-ip 92.242.63.93 --skip-nginx
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --domain) PANEL_DOMAIN="$2"; shift 2 ;;
+        --public-ip) PUBLIC_IP="$2"; shift 2 ;;
         --admin) ADMIN_USER="$2"; shift 2 ;;
         --password) ADMIN_PASSWORD="$2"; shift 2 ;;
         --email) ADMIN_EMAIL="$2"; shift 2 ;;
@@ -101,11 +101,19 @@ create_env() {
         sed -i "s|UVICORN_PORT=.*|UVICORN_PORT=443|" .env
         sed -i "s|UVICORN_SSL_CERTFILE=.*|UVICORN_SSL_CERTFILE=/etc/letsencrypt/live/$PANEL_DOMAIN/fullchain.pem|" .env
         sed -i "s|UVICORN_SSL_KEYFILE=.*|UVICORN_SSL_KEYFILE=/etc/letsencrypt/live/$PANEL_DOMAIN/privkey.pem|" .env
+        sed -i "s|FLEW_DOMAIN=.*|FLEW_DOMAIN=$PANEL_DOMAIN|" .env
+        sed -i "s|XRAY_SUBSCRIPTION_URL_PREFIX=.*|XRAY_SUBSCRIPTION_URL_PREFIX=https://$PANEL_DOMAIN|" .env
     else
         sed -i "s|UVICORN_HOST=.*|UVICORN_HOST=0.0.0.0|" .env
         sed -i "s|UVICORN_PORT=.*|UVICORN_PORT=8000|" .env
         sed -i "s|UVICORN_SSL_CERTFILE=.*|UVICORN_SSL_CERTFILE=|" .env
         sed -i "s|UVICORN_SSL_KEYFILE=.*|UVICORN_SSL_KEYFILE=|" .env
+        sed -i "s|FLEW_TARGET_CHECK_IPS=.*|FLEW_TARGET_CHECK_IPS=|" .env
+        
+        if [ -n "$PUBLIC_IP" ]; then
+            sed -i "s|FLEW_DOMAIN=.*|FLEW_DOMAIN=http://$PUBLIC_IP:8000|" .env
+            sed -i "s|XRAY_SUBSCRIPTION_URL_PREFIX=.*|XRAY_SUBSCRIPTION_URL_PREFIX=http://$PUBLIC_IP:8000|" .env
+        fi
     fi
     
     SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
@@ -201,8 +209,12 @@ echo ""
 echo "Installation complete!"
 if [ -n "$PANEL_DOMAIN" ]; then
     echo "Open: https://$PANEL_DOMAIN/dashboard/"
+elif [ -n "$PUBLIC_IP" ]; then
+    echo "Open: http://$PUBLIC_IP:8000/dashboard/"
 else
-    echo "Open: http://$(hostname -I | awk '{print $1}'):8000/dashboard/"
+    DETECTED_IP=$(hostname -I | awk '{print $1}')
+    echo "Open: http://${DETECTED_IP}:8000/dashboard/"
+    echo "Note: If $DETECTED_IP is not your public IP, use --public-ip YOUR_PUBLIC_IP"
 fi
 echo "Admin user: $ADMIN_USER"
 echo "Password: $ADMIN_PASSWORD"
