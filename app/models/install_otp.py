@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from app.utils.edition_names import normalize_edition_name, valid_edition_names
 
 _ALLOWED_EDITIONS = valid_edition_names()
-_ALLOWED_PRODUCTS = {"flew", "marzban_patch"}
+_ALLOWED_PRODUCTS = {"flew"}
 _DEFAULT_PRODUCT = "flew"
 
 
@@ -33,7 +33,7 @@ class InstallOtpCreate(BaseModel):
     def validate_product(cls, value: str):
         normalized = (value or "").strip().lower()
         if normalized not in _ALLOWED_PRODUCTS:
-            raise ValueError("product must be flew or marzban_patch")
+            raise ValueError("product must be fleW")
         return normalized
 
     @field_validator("bound_ip")

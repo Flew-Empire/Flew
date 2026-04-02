@@ -97,24 +97,12 @@ const statusBadge = (status: string) => {
 
 const productLabel = (value?: string | null) => {
   const normalized = (value || "").toLowerCase();
-  if (normalized === "marzban_patch") return "Marzban patch";
   if (normalized === "flew" || !normalized) return "Flew panel";
   return value || "-";
 };
 
 const buildInstallCommand = (otp: InstallOtp) => {
   const domain = DEFAULT_INSTALL_DOMAIN;
-  const product = (otp.product || "flew").toLowerCase();
-  if (product === "marzban_patch") {
-    const editionValue = normalizeEdition(otp.edition);
-    return [
-      `curl -fsSL https://${domain}/api/install/marzban/script | bash -s --`,
-      `--domain ${domain}`,
-      `--otp ${otp.code}`,
-      `--edition ${editionValue}`,
-      `--target /opt/marzban`,
-    ].join(" ");
-  }
   const editionValue = normalizeEdition(otp.edition);
   return [
     `curl -fsSL https://${domain}/api/install/script | bash -s --`,
@@ -306,7 +294,6 @@ export const InstallOtpManager: FC = () => {
             <FormLabel>Product</FormLabel>
             <Select value={product} onChange={(e) => setProduct(e.target.value)}>
               <option value="flew">Flew panel</option>
-              <option value="marzban_patch">Marzban patch</option>
             </Select>
           </FormControl>
           <FormControl>

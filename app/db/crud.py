@@ -105,7 +105,7 @@ _admin_billing_tables_lock = threading.Lock()
 _admin_billing_tables_checked = False
 
 _ALLOWED_INSTALL_EDITIONS = valid_edition_names()
-_ALLOWED_INSTALL_PRODUCTS = {"flew", "marzban_patch"}
+_ALLOWED_INSTALL_PRODUCTS = {"flew"}
 _DEFAULT_INSTALL_PRODUCT = "flew"
 
 

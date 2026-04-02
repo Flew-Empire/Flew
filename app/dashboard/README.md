@@ -1,4 +1,4 @@
-# Dashboard UI for flew
+# Dashboard UI for Flew
 
 ## Requirements
 
@@ -11,8 +11,8 @@ This project has been developed on the Nodejs v16.17.0 so if you faced any issue
 
 ## Install
 
-    git clone https://github.com/gozargah/marz-manager.git
-    cd marz-manager
+    git clone https://github.com/Flew-Empire/Flew.git
+    cd Flew/app/dashboard
     yarn install
 
 ### Configure app
@@ -25,7 +25,7 @@ Copy `example.env` to `.env` then set the backend api address:
 
 | Name          | Description                                                                          |
 | ------------- | ------------------------------------------------------------------------------------ |
-| VITE_BASE_API | The api url of the deployed backend ([Flew](https://github.com/gozargah/Flew)) |
+| VITE_BASE_API | The api url of the deployed backend ([Flew](https://github.com/Flew-Empire/Flew)) |
 
 ## Start development server
 

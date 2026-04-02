@@ -800,7 +800,7 @@ class V2rayJsonConfig(str):
                         {
                             "id": id,
                             "alterId": 0,
-                            "email": "https://gozargah.github.io/flew/",
+                            "email": "https://Flew-Empire.github.io/flew/",
                             "security": "auto"
                         }
                     ],
@@ -820,7 +820,7 @@ class V2rayJsonConfig(str):
                             "id": id,
                             "security": "auto",
                             "encryption": "none",
-                            "email": "https://gozargah.github.io/flew/",
+                            "email": "https://Flew-Empire.github.io/flew/",
                             "alterId": 0,
                             "flow": flow
                         }
@@ -837,7 +837,7 @@ class V2rayJsonConfig(str):
                     "address": address,
                     "port": port,
                     "password": password,
-                    "email": "https://gozargah.github.io/flew/",
+                    "email": "https://Flew-Empire.github.io/flew/",
                 }
             ]
         }
@@ -850,7 +850,7 @@ class V2rayJsonConfig(str):
                     "address": address,
                     "port": port,
                     "password": password,
-                    "email": "https://gozargah.github.io/flew/",
+                    "email": "https://Flew-Empire.github.io/flew/",
                     "method": method,
                     "uot": False,
                 }
