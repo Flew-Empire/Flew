@@ -101,12 +101,16 @@ create_env() {
         sed -i "s|UVICORN_PORT=.*|UVICORN_PORT=443|" .env
         sed -i "s|UVICORN_SSL_CERTFILE=.*|UVICORN_SSL_CERTFILE=/etc/letsencrypt/live/$PANEL_DOMAIN/fullchain.pem|" .env
         sed -i "s|UVICORN_SSL_KEYFILE=.*|UVICORN_SSL_KEYFILE=/etc/letsencrypt/live/$PANEL_DOMAIN/privkey.pem|" .env
+        sed -i "s|FLEW_DOMAIN=.*|FLEW_DOMAIN=$PANEL_DOMAIN|" .env
+        sed -i "s|XRAY_SUBSCRIPTION_URL_PREFIX=.*|XRAY_SUBSCRIPTION_URL_PREFIX=https://$PANEL_DOMAIN|" .env
     else
         sed -i "s|UVICORN_HOST=.*|UVICORN_HOST=0.0.0.0|" .env
         sed -i "s|UVICORN_PORT=.*|UVICORN_PORT=8000|" .env
         sed -i "s|UVICORN_SSL_CERTFILE=.*|UVICORN_SSL_CERTFILE=|" .env
         sed -i "s|UVICORN_SSL_KEYFILE=.*|UVICORN_SSL_KEYFILE=|" .env
     fi
+    
+    sed -i "s|FLEW_TARGET_CHECK_IPS=.*|FLEW_TARGET_CHECK_IPS=|" .env
     
     SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
     sed -i "s|SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" .env

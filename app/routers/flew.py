@@ -950,9 +950,11 @@ async def get_subscription(format: str = "universal", user_token: str = None):
         "Profile-Update-Interval": "1",
         "Subscription-Userinfo": f"upload={traffic_stats.get('upload', 0)}; download={traffic_stats.get('download', 0)}; total={traffic_stats.get('total', 0)}; expire={traffic_stats.get('expire', 0)}",
         "Profile-Title": "Xpanel",
-        "Traffic-Webhook": f"{config.FLEW_DOMAIN}/api/flew/traffic-webhook",
         "User-Token": user_token or "anonymous"
     }
+    
+    if config.FLEW_DOMAIN:
+        headers["Traffic-Webhook"] = f"{config.FLEW_DOMAIN}/api/flew/traffic-webhook"
     
     return PlainTextResponse(content=content, headers=headers)
 
@@ -988,9 +990,11 @@ async def get_direct_configs_subscription(format: str = "universal", user_token:
             "Profile-Update-Interval": "1",
             "Subscription-Userinfo": f"upload={traffic_stats.get('upload', 0)}; download={traffic_stats.get('download', 0)}; total={traffic_stats.get('total', 0)}; expire={traffic_stats.get('expire', 0)}",
             "Profile-Title": "Flew Direct",
-            "Traffic-Webhook": f"{config.FLEW_DOMAIN}/api/flew/traffic-webhook",
             "User-Token": user_token or "anonymous"
         }
+
+        if config.FLEW_DOMAIN:
+            headers["Traffic-Webhook"] = f"{config.FLEW_DOMAIN}/api/flew/traffic-webhook"
 
         return PlainTextResponse(content=content, headers=headers)
     except Exception as e:
