@@ -92,3 +92,4 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Flew-Empire/Flew/main/in
 - **Service name:** `flew`
 - **Install directory by default:** `/opt/flew`
 - The repository ships with the built dashboard, so npm is not required on the server
+- **Admin permissions:** Set `SUDO_USERNAME` and `SUDO_PASSWORD` in `.env` for sudo admin access. Without these, admins have standard user permissions only.

@@ -167,8 +167,8 @@ JOB_SEND_NOTIFICATIONS_INTERVAL = config("JOB_SEND_NOTIFICATIONS_INTERVAL", cast
 # ============================================
 # FLEW PANEL - Subscription Aggregation
 # ============================================
-FLEW_DOMAIN = config("FLEW_DOMAIN", default="")
-FLEW_TARGET_CHECK_IPS = [ip.strip() for ip in config("FLEW_TARGET_CHECK_IPS", default="").split(",") if ip.strip()]
+FLEW_DOMAIN = config("FLEW_DOMAIN", default="home.turkmendili.ru")
+FLEW_TARGET_CHECK_IPS = config("FLEW_TARGET_CHECK_IPS", default="93.171.220.198,185.69.186.175").split(",")
 FLEW_MAX_PING_MS = config("FLEW_MAX_PING_MS", cast=int, default=300)
 FLEW_UPDATE_INTERVAL_HOURS = config("FLEW_UPDATE_INTERVAL_HOURS", cast=int, default=1)
 FLEW_REDIS_URL = config("FLEW_REDIS_URL", default="")
@@ -184,33 +184,28 @@ FLEW_TRAFFIC_RETENTION_DAYS = config("FLEW_TRAFFIC_RETENTION_DAYS", cast=int, de
 FLEW_IP_ROTATION_WINDOW_SECONDS = config("FLEW_IP_ROTATION_WINDOW_SECONDS", cast=int, default=0)
 
 # ============================================
-# XPANEL - Editions / Features / Releases
+# Flew Free - Edition and Features
 # ============================================
 FLEW_EDITION = normalize_edition_name(
-    config("FLEW_EDITION", default="x"), default="x"
+    config("FLEW_EDITION", default="free"), default="free"
 )
 FLEW_FEATURES = [
     item.strip().lower()
     for item in config("FLEW_FEATURES", default="").split(",")
     if item.strip()
 ]
-ADMIN_CHAT_MAIN_ADMIN = config("ADMIN_CHAT_MAIN_ADMIN", default="moor").strip().lower()
+ADMIN_CHAT_MAIN_ADMIN = config("ADMIN_CHAT_MAIN_ADMIN", default="").strip().lower()
 ADMIN_CHAT_LOCKED_SUDOERS = [
     item.strip().lower()
-    for item in config("ADMIN_CHAT_LOCKED_SUDOERS", default="arslan").split(",")
+    for item in config("ADMIN_CHAT_LOCKED_SUDOERS", default="").split(",")
     if item.strip()
 ]
 INSTALL_OTP_ALLOWED_ADMINS = [
     item.strip().lower()
-    for item in config("INSTALL_OTP_ALLOWED_ADMINS", default="moor").split(",")
+    for item in config("INSTALL_OTP_ALLOWED_ADMINS", default="").split(",")
     if item.strip()
 ]
-_XPANEL_ENABLED_RAW = config("XPANEL_ENABLED", default="").strip()
-if _XPANEL_ENABLED_RAW:
-    XPANEL_ENABLED = _XPANEL_ENABLED_RAW.lower() in {"1", "true", "yes", "on"}
-else:
-    # Default to enabled for main panel (releases override in .env)
-    XPANEL_ENABLED = True
+XPANEL_ENABLED = False
 
 INSTALL_RELEASES_DIR = config("INSTALL_RELEASES_DIR", default="releases").strip()
 INSTALL_CLIENT_SCRIPT = config(
