@@ -15,6 +15,7 @@ def get_grpc_multi(path: str) -> str:
         return path
     
     servicename = path.rsplit("/", 1)[0]
-    streamname = path.rsplit("/", 1)[1].split("|")[1]
+    parts = path.rsplit("/", 1)[1].split("|")
+    streamname = parts[1] if len(parts) > 1 else parts[0]
 
     return "%s%s%s" % (servicename, "/", streamname)

@@ -11,12 +11,12 @@
   "custom_response_headers": {},
   "custom_remarks": {
     "expired_users": [
-      "Subscription expired",
-      "Contact support"
+      "У вас закончился срок подписки.",
+      "Siziñ wagtyñyz doldy."
     ],
     "limited_users": [
-      "Subscription limited",
-      "Contact support"
+      "Вы исчерпали свой трафик.",
+      "Siziñ trafigyñyz doldy."
     ],
     "disabled_users": [
       "Subscription disabled",
