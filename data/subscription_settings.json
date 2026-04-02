@@ -1,0 +1,41 @@
+{
+  "profile_title": "Flew",
+  "support_link": "https://t.me/",
+  "profile_update_interval": 2,
+  "is_profile_web_page_url_enabled": true,
+  "serve_json_for_happ": false,
+  "is_show_custom_remarks": true,
+  "randomize_text_links": false,
+  "happ_announce": "Обновляйте подписку перед каждым подключением 🔄\n\nHer bir birikdirmeden öň podpiskany täzeläň 🔄",
+  "happ_routing": "",
+  "custom_response_headers": {},
+  "custom_remarks": {
+    "expired_users": [
+      "У вас закончился срок подписки.",
+      "Siziñ wagtyñyz doldy."
+    ],
+    "limited_users": [
+      "Вы исчерпали свой трафик.",
+      "Siziñ trafigyñyz doldy."
+    ],
+    "disabled_users": [
+      "Subscription disabled",
+      "Contact support"
+    ],
+    "empty_hosts": [
+      "No active hosts available",
+      "Check Hosts page"
+    ],
+    "hwid_max_devices_exceeded": [
+      "Device limit reached"
+    ],
+    "hwid_not_supported": [
+      "App not supported"
+    ]
+  },
+  "hwid_settings": {
+    "enabled": true,
+    "fallback_device_limit": 1,
+    "max_devices_announce": "Device limit reached"
+  }
+}

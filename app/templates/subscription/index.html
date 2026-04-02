@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
+    <meta name="theme-color" content="#0d1726" />
+    <link rel="icon" type="image/svg+xml" href="/statics/favicon/favicon.svg" />
+    <link rel="manifest" href="/statics/favicon/site.webmanifest" />
+    <link rel="mask-icon" href="/statics/favicon/favicon.svg" color="#5bbad5" />
+    <link rel="shortcut icon" href="/statics/favicon/favicon.svg" />
+    <meta name="apple-mobile-web-app-title" content="Flew" />
+    <meta name="application-name" content="Flew" />
+    <meta name="msapplication-TileColor" content="#2b5797" />
+    <meta name="msapplication-config" content="/statics/favicon/browserconfig.xml" />
+    <title>{{ meta_title or "Flew Subscription" }}</title>
+    <meta name="description" content="{{ meta_description or 'Flew subscription page' }}" />
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #f3f8ff;
+            --bg-accent: radial-gradient(circle at top left, rgba(36, 116, 255, 0.16), transparent 34%), radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.14), transparent 28%), linear-gradient(160deg, #f7fbff 0%, #eef4fb 100%);
+            --card: rgba(255, 255, 255, 0.88);
+            --card-strong: rgba(255, 255, 255, 0.96);
+            --border: rgba(15, 23, 42, 0.08);
+            --text: #122033;
+            --muted: #617086;
+            --primary: #2474ff;
+            --primary-strong: #145bda;
+            --primary-soft: rgba(36, 116, 255, 0.12);
+            --success: #159a66;
+            --warning: #c57b14;
+            --danger: #d14c5b;
+            --shadow: 0 24px 60px rgba(13, 24, 43, 0.14);
+            --radius-xl: 30px;
+            --radius-lg: 24px;
+            --radius-md: 18px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #08111d;
+                --bg-accent: radial-gradient(circle at top left, rgba(67, 182, 255, 0.14), transparent 32%), radial-gradient(circle at bottom right, rgba(36, 116, 255, 0.18), transparent 28%), linear-gradient(160deg, #06101b 0%, #0b1624 100%);
+                --card: rgba(10, 19, 32, 0.84);
+                --card-strong: rgba(8, 18, 32, 0.94);
+                --border: rgba(148, 163, 184, 0.16);
+                --text: #edf4ff;
+                --muted: #9badc7;
+                --primary: #43b6ff;
+                --primary-strong: #7ad0ff;
+                --primary-soft: rgba(67, 182, 255, 0.14);
+                --success: #2ac17d;
+                --warning: #f0a53a;
+                --danger: #ff7684;
+                --shadow: 0 30px 64px rgba(0, 0, 0, 0.32);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: "Segoe UI", "SF Pro Display", "Helvetica Neue", sans-serif;
+            background: var(--bg-accent), var(--bg);
+            color: var(--text);
+        }
+
+        button, a, input, select {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .page {
+            width: min(1220px, calc(100vw - 28px));
+            margin: 0 auto;
+            padding: 26px 0 42px;
+        }
+
+        .glass {
+            background: var(--card);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.92fr);
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .hero-main,
+        .hero-side,
+        .section {
+            border-radius: var(--radius-xl);
+        }
+
+        .hero-main {
+            padding: 28px;
+            background: var(--card-strong);
+        }
+
+        .hero-side {
+            padding: 24px;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            border-radius: 999px;
+            padding: 10px 14px;
+            background: var(--primary-soft);
+            border: 1px solid rgba(36, 116, 255, 0.18);
+            margin-bottom: 18px;
+        }
+
+        .brand-badge {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+            color: #fff;
+            box-shadow: 0 14px 30px rgba(36, 116, 255, 0.24);
+            flex-shrink: 0;
+        }
+
+        .brand-logo {
+            width: 28px;
+            height: 40px;
+            display: block;
+        }
+
+        .brand-title {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-subtitle {
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .identity-pills,
+        .summary-grid,
+        .section-grid,
+        .selector-tabs,
+        .notes-list,
+        .raw-links,
+        .platform-tabs {
+            display: grid;
+            gap: 12px;
+        }
+
+        .identity-pills {
+            grid-template-columns: repeat(3, minmax(0, max-content));
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 0 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 13px;
+            font-weight: 700;
+            width: fit-content;
+        }
+
+        .pill.active {
+            color: var(--success);
+            background: rgba(21, 154, 102, 0.12);
+        }
+
+        .pill.limited {
+            color: var(--warning);
+            background: rgba(197, 123, 20, 0.14);
+        }
+
+        .pill.expired,
+        .pill.inactive {
+            color: var(--danger);
+            background: rgba(209, 76, 91, 0.14);
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: clamp(30px, 4vw, 46px);
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+        }
+
+        .hero-copy,
+        .section-copy {
+            color: var(--muted);
+            line-height: 1.68;
+            font-size: 15px;
+        }
+
+        .hero-copy {
+            margin: 0 0 22px;
+            max-width: 720px;
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn,
+        .mini-btn,
+        .tab-btn {
+            appearance: none;
+            border: 1px solid transparent;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+        }
+
+        .btn:hover,
+        .mini-btn:hover,
+        .tab-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn {
+            padding: 13px 18px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .btn-primary {
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+            box-shadow: 0 18px 30px rgba(36, 116, 255, 0.24);
+        }
+
+        .btn-secondary {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.22);
+            border-color: var(--border);
+        }
+
+        .btn-ghost {
+            color: var(--muted);
+            background: transparent;
+            border-style: dashed;
+            border-color: var(--border);
+        }
+
+        .summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .summary-card,
+        .detail-card,
+        .link-card,
+        .note-card,
+        .support-card {
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .summary-card {
+            padding: 16px;
+        }
+
+        .summary-label {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+        }
+
+        .summary-value {
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        .sections {
+            display: grid;
+            gap: 18px;
+        }
+
+        .section {
+            padding: 22px;
+        }
+
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .section-body[hidden] {
+            display: none;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .section-copy {
+            margin: 6px 0 0;
+        }
+
+        .platform-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .detected-badge {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .platform-tabs {
+            grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+            margin-bottom: 14px;
+        }
+
+        .tab-btn {
+            border-radius: 16px;
+            padding: 13px 14px;
+            border-color: var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            text-align: left;
+            font-weight: 800;
+        }
+
+        .tab-btn small {
+            display: block;
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            border-color: rgba(36, 116, 255, 0.28);
+            background: var(--primary-soft);
+        }
+
+        .selector-tabs {
+            grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+            margin-top: 14px;
+            margin-bottom: 14px;
+        }
+
+        #appDetail {
+            margin-top: 14px;
+        }
+
+        .selector-btn {
+            border-radius: 16px;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            text-align: left;
+            font-weight: 800;
+        }
+
+        .selector-btn small {
+            display: block;
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .selector-btn.active {
+            border-color: rgba(36, 116, 255, 0.28);
+            background: var(--primary-soft);
+            box-shadow: 0 18px 30px rgba(36, 116, 255, 0.12);
+        }
+
+        .detail-card,
+        .link-card,
+        .note-card,
+        .support-card {
+            padding: 18px;
+        }
+
+        .detail-card h3,
+        .support-card h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            line-height: 1.2;
+        }
+
+        .detail-tag {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .detail-copy,
+        .note-copy {
+            color: var(--muted);
+            line-height: 1.62;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .detail-actions,
+        .link-actions,
+        .support-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .mini-btn {
+            border-radius: 14px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--border);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .detail-linkbox {
+            padding: 14px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.08);
+            margin-bottom: 14px;
+        }
+
+        .detail-link {
+            overflow-wrap: anywhere;
+            font-size: 13px;
+            color: var(--muted);
+            margin: 6px 0 0;
+        }
+
+        .raw-links {
+            grid-template-columns: 1fr;
+        }
+
+        .collapse-trigger {
+            min-width: 124px;
+            text-align: center;
+        }
+
+        .link-card-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .link-index {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+        }
+
+        .link-value {
+            overflow-wrap: anywhere;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .notes-list {
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .note-card {
+            background: rgba(209, 76, 91, 0.08);
+            border-color: rgba(209, 76, 91, 0.18);
+        }
+
+        .announce-card {
+            background: rgba(36, 116, 255, 0.08);
+            border-color: rgba(36, 116, 255, 0.14);
+            white-space: pre-wrap;
+        }
+
+        .support-card {
+            display: grid;
+            gap: 12px;
+        }
+
+        .support-link {
+            color: var(--primary);
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .empty-state {
+            padding: 18px;
+            border-radius: var(--radius-md);
+            border: 1px dashed var(--border);
+            color: var(--muted);
+        }
+
+        .toast-stack {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 50;
+            display: grid;
+            gap: 10px;
+        }
+
+        .toast {
+            min-width: 220px;
+            max-width: 320px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(36, 116, 255, 0.16);
+            background: var(--card-strong);
+            box-shadow: var(--shadow);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .page {
+                width: min(100vw - 24px, 100%);
+                padding: 20px 0 34px;
+            }
+
+            .hero {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-main,
+            .hero-side,
+            .section {
+                padding: 22px;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .platform-tabs,
+            .selector-tabs {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 860px) {
+            .brand {
+                width: 100%;
+                border-radius: 24px;
+                padding: 12px 14px;
+            }
+
+            .identity-pills {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                align-items: stretch;
+                margin-bottom: 16px;
+            }
+
+            .pill {
+                width: 100%;
+                justify-content: center;
+                min-height: 34px;
+                padding: 0 10px;
+                font-size: 12px;
+            }
+
+            .action-row > * {
+                flex: 1 1 calc(50% - 6px);
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page {
+                width: min(100vw - 18px, 100%);
+                padding: 10px 0 22px;
+            }
+
+            .hero-main,
+            .hero-side,
+            .section {
+                padding: 14px;
+                border-radius: 18px;
+            }
+
+            .brand {
+                gap: 8px;
+                padding: 8px 10px;
+                margin-bottom: 14px;
+            }
+
+            .brand-badge {
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+            }
+
+            .brand-logo {
+                width: 20px;
+                height: 28px;
+            }
+
+            .brand-title {
+                font-size: 15px;
+            }
+
+            .brand-subtitle {
+                font-size: 11px;
+            }
+
+            h1 {
+                margin-bottom: 8px;
+                font-size: clamp(24px, 7vw, 30px);
+            }
+
+            .hero-copy,
+            .section-copy,
+            .detail-copy {
+                font-size: 13px;
+                line-height: 1.52;
+            }
+
+            .hero-copy {
+                margin: 0 0 14px;
+            }
+
+            .summary-grid,
+            .selector-tabs {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .platform-tabs {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+
+            .summary-card,
+            .detail-card,
+            .note-card,
+            .support-card {
+                padding: 14px;
+            }
+
+            .summary-label,
+            .link-index {
+                font-size: 11px;
+                margin-bottom: 6px;
+            }
+
+            .summary-value {
+                font-size: 17px;
+            }
+
+            .tab-btn,
+            .selector-btn {
+                border-radius: 12px;
+                padding: 10px 10px;
+                font-size: 13px;
+            }
+
+            .selector-btn small {
+                margin-top: 2px;
+                font-size: 11px;
+            }
+
+            .platform-tabs .tab-btn {
+                min-height: 52px;
+                padding: 8px 8px;
+                text-align: center;
+                font-size: 12px;
+                line-height: 1.2;
+            }
+
+            .platform-tabs .tab-btn small {
+                display: none;
+            }
+
+            .selector-tabs {
+                margin-top: 10px;
+                margin-bottom: 10px;
+            }
+
+            #appDetail {
+                margin-top: 10px;
+            }
+
+            .action-row,
+            .detail-actions {
+                gap: 8px;
+            }
+
+            .btn {
+                padding: 11px 12px;
+                border-radius: 12px;
+                font-size: 13px;
+            }
+
+            .mini-btn {
+                border-radius: 12px;
+                padding: 9px 10px;
+                font-size: 12px;
+            }
+
+            .action-row > *,
+            .detail-actions > * {
+                flex: 1 1 calc(50% - 4px);
+                width: auto;
+            }
+
+            .section-head,
+            .link-card-head {
+                flex-direction: column;
+            }
+
+            .section-head {
+                margin-bottom: 14px;
+                gap: 10px;
+            }
+
+            .section-title {
+                font-size: 17px;
+            }
+
+            .toast-stack {
+                left: 10px;
+                right: 10px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .identity-pills {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid,
+            .selector-tabs {
+                grid-template-columns: 1fr;
+            }
+
+            .platform-tabs {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .action-row > *,
+            .detail-actions > * {
+                width: 100%;
+                flex-basis: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <div class="page">
+        <section class="hero">
+            <div class="glass hero-main">
+                <div class="brand">
+                    <span class="brand-badge" aria-hidden="true">
+                        <svg class="brand-logo" viewBox="0 0 595.3 841.9" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M149.6,446.4c2.2.8,2.3-16.8,2.3-17.8,12-43,13-86,31-126,9-19,23-33,40-47,4.8-4,19.1-13.9,40-21,15.1-5.1,26.6-6.3,36.9-7.6,0,0,31.6-3.8,75.1-12.4,0,0,82.2-18.1,124-53,4.9-4.1,9-9,9-9,2.8-3,5.2-5.7,7.2-8.2,3.8-4.9,6-7.8,6-7.8,0,0-.3.5-.3.5,0,0,1.9-2,6.6-7.4,2.4,12.8-1.2,1.4,0,0,2.7,14,5.3,37.8-1.5,65.8-4.5,18.6-11.8,33.1-17.9,43.2-1,1.6-2.1,3.2-3.1,4.8-15,25-39,41-64,54-43,21-90,19-137,26-33,5-63,11-92,30-23,15-41,33-53,57-1,6.1-2.1,12.2-3.1,18.3" stroke="currentColor" stroke-width="13" stroke-miterlimit="10"/>
+                            <path d="M523.4,143.3s-16,46.6-43,71.8c-19.3,18-63.4,39.2-116.6,51.9-15.4,3.7-42.2,8.4-58.7,10.3-64.7,7.8-128.6,64.5-141.2,94.1" stroke="currentColor" stroke-width="7" stroke-miterlimit="10"/>
+                            <path d="M127.6,565.1c12.4-23.6,27.6-38.1,37.3-46,22.4-18.2,45.1-25.3,62.5-30.7,18.6-5.8,35.8-8.3,42.8-9.4,7.9-1.2,16.7-2.2,27.3-2.8,52.4-2.9,63.3-9.4,68-11.3,10.5-4.3,20.5-10.5,27.5-14.8,2.5-1.6,5.1-3.2,8-5.8.9-.8,2.5-2.2,8-8.5,4.2-4.7,6.2-7.1,7.7-9.1,3.2-4.3,5.4-8.1,7.2-11.3,1.1-1.9,2.3-3.9,3.6-6.5,2.1-4.4,4-9.1,5.5-14.3,6.2-21.6,6.2-37.8,6.2-37.8,0,0-20.2,18.4-50.4,23.1-30.2,4.7-87.6,7.6-106.2,7.8s-54.7,6.6-74,18.2c-19.3,11.6-52.4,33.4-59.9,59.5-3.7,12.9-10.1,39.8-10.1,40.1h0" stroke="currentColor" stroke-width="13" stroke-miterlimit="10"/>
+                            <path d="M431.8,368s-17.2,49.1-82.8,59.2c-65.7,10.1-120.1,13.2-150.4,31.6-29.6,18-58.8,50.7-62.9,73.6" stroke="currentColor" stroke-width="7" stroke-miterlimit="10"/>
+                            <path d="M312.2,321.9s-40.8,27.2-36.5,71.7" stroke="currentColor" stroke-width="13" stroke-miterlimit="10"/>
+                            <line x1="153" y1="428.6" x2="108" y2="668.2" stroke="currentColor" stroke-width="13" stroke-miterlimit="10"/>
+                            <path d="M258.3,482.2c-6.2,40.4-18.5,99-42.4,139.3-2.2,3.7-5,8.2-9.6,13.1-28.1,30.5-75.1,29.4-98.9,26.9" stroke="currentColor" stroke-width="13" stroke-miterlimit="10"/>
+                            <path d="M209,495.5c-1.1,25.5-6.1,46.2-10.7,60.7-7.2,22.6-16,38.5-19,43.6-4.5,7.9-13.7,23.6-29.5,39.5-7.9,7.9-19,18.1-24.5,22.1" stroke="currentColor" stroke-width="7" stroke-miterlimit="10"/>
+                            <line x1="156.2" y1="425.3" x2="153.9" y2="449.7" stroke="currentColor" stroke-width="13" stroke-miterlimit="10"/>
+                        </svg>
+                    </span>
+                    <div>
+                        <div class="brand-title" id="brandTitle">{{ meta_title or "Flew" }}</div>
+                        <div class="brand-subtitle" id="brandSubtitle">Smart subscription page</div>
+                    </div>
+                </div>
+
+                <div class="identity-pills" id="identityPills"></div>
+
+                <h1 id="heroTitle">Your Flew subscription hub</h1>
+                <p class="hero-copy" id="heroCopy">
+                    Install the right app for your device, copy the best import link and manage all subscription formats from one page.
+                </p>
+
+                <div class="action-row" id="heroActions"></div>
+            </div>
+
+            <aside class="glass hero-side">
+                <div class="section-head">
+                    <div>
+                        <h2 class="section-title" id="summaryTitle">Subscription overview</h2>
+                        <p class="section-copy" id="summaryCopy">Usage, limits and expiration status for the current account.</p>
+                    </div>
+                </div>
+                <div class="summary-grid" id="summaryGrid"></div>
+            </aside>
+        </section>
+
+        <div class="sections">
+            <section class="glass section" id="platformSection">
+                <div class="section-head">
+                    <div>
+                        <h2 class="section-title" id="platformTitle">Install and connect</h2>
+                        <p class="section-copy" id="platformCopy">The page detects your platform and suggests the most suitable clients and import links.</p>
+                    </div>
+                </div>
+                <div class="platform-toolbar">
+                    <div class="detected-badge" id="detectedBadge">Detecting device...</div>
+                </div>
+                <div class="platform-tabs" id="platformTabs"></div>
+                <div class="selector-tabs" id="appChoiceTabs"></div>
+                <div id="appDetail"></div>
+            </section>
+
+            <section class="glass section" id="notesSection">
+                <div class="section-head">
+                    <div>
+                        <h2 class="section-title" id="notesTitle">Notes and announcements</h2>
+                        <p class="section-copy" id="notesCopy">Custom remarks, support hints and announce text from your panel settings.</p>
+                    </div>
+                    <button class="mini-btn collapse-trigger" type="button" id="notesToggleBtn">Show</button>
+                </div>
+                <div class="section-body" id="notesBody" hidden>
+                    <div class="notes-list" id="notesList"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script id="pagePayload" type="application/octet-stream">{{ page_payload_b64 }}</script>
+    <script>
+        const TRANSLATIONS = {
+            en: {
+                brandSubtitle: "Smart subscription page",
+                heroTitle: "Your Flew subscription hub",
+                heroCopy: "Install the right app for your device, copy the best import link and manage all subscription formats from one page.",
+                username: "Username",
+                status: "Status",
+                expires: "Expires",
+                used: "Data used",
+                limit: "Traffic limit",
+                lifetime: "Lifetime traffic",
+                daysLeft: "Days left",
+                detected: "Detected device",
+                unknownDevice: "Unknown device",
+                platformTitle: "Install and connect",
+                platformCopy: "The page detects your platform and suggests the most suitable clients and import links.",
+                formatsTitle: "Quick formats",
+                formatsCopy: "Use the same subscription with different clients and profiles.",
+                rawTitle: "Raw keys and direct links",
+                rawCopy: "Direct V2Ray-style links generated for this subscription.",
+                notesTitle: "Notes and announcements",
+                notesCopy: "Custom remarks, support hints and announce text from your panel settings.",
+                supportTitle: "Support",
+                supportCopy: "Need help with setup or want to share this link with another device? Use the actions below.",
+                summaryTitle: "Subscription overview",
+                summaryCopy: "Usage, limits and expiration status for the current account.",
+                copySubscription: "Copy subscription",
+                copyLink: "Copy link",
+                getApp: "Get app",
+                openInApp: "Open in app",
+                autoImport: "Tap the button below and the client will try to open and add this subscription automatically.",
+                openSupport: "Open support",
+                copySupport: "Copy support link",
+                emptyLinks: "No raw links are available for this subscription.",
+                restrictedView: "Restricted view is enabled for this link.",
+                copied: "Copied to clipboard",
+                copyFailed: "Clipboard is not available on this device.",
+                close: "Close",
+                noNotes: "No notes are configured for this subscription.",
+                noApps: "No apps are configured for this platform yet.",
+                choosePlatform: "Choose platform",
+                chooseApp: "Choose app",
+                chooseFormat: "Choose format",
+                rawLink: "Raw link",
+                importFormat: "Import format",
+                supportLink: "Support link",
+                directSubscription: "Direct subscription",
+                hiddenSettings: "Hidden settings mode is active for this link.",
+                showSection: "Open",
+                hideSection: "Hide",
+            },
+            ru: {
+                brandSubtitle: "Умная страница подписки",
+                heroTitle: "Ваш центр подписки Flew",
+                heroCopy: "Подберите приложение под устройство, скопируйте лучший импорт-линк и управляйте всеми форматами подписки с одной страницы.",
+                username: "Пользователь",
+                status: "Статус",
+                expires: "Истекает",
+                used: "Израсходовано",
+                limit: "Лимит трафика",
+                lifetime: "Трафик за всё время",
+                daysLeft: "Дней осталось",
+                detected: "Обнаружено устройство",
+                unknownDevice: "Неизвестное устройство",
+                platformTitle: "Установка и подключение",
+                platformCopy: "Страница определяет платформу и предлагает подходящие клиенты и ссылки для импорта.",
+                formatsTitle: "Быстрые форматы",
+                formatsCopy: "Одна и та же подписка для разных клиентов и профилей.",
+                rawTitle: "Raw ключи и прямые ссылки",
+                rawCopy: "Прямые V2Ray-ссылки, сгенерированные для этой подписки.",
+                notesTitle: "Примечания и объявления",
+                notesCopy: "Кастомные примечания, подсказки и announce из настроек панели.",
+                supportTitle: "Поддержка",
+                supportCopy: "Нужна помощь с настройкой или нужно открыть ссылку на другом устройстве? Используйте действия ниже.",
+                summaryTitle: "Обзор подписки",
+                summaryCopy: "Использование, лимиты и срок действия текущего аккаунта.",
+                copySubscription: "Копировать подписку",
+                copyLink: "Копировать ссылку",
+                getApp: "Получить приложение",
+                openInApp: "Открыть в приложении",
+                autoImport: "Нажмите кнопку ниже, и клиент попробует открыться и автоматически добавить эту подписку.",
+                openSupport: "Открыть поддержку",
+                copySupport: "Копировать поддержку",
+                emptyLinks: "Для этой подписки пока нет raw-ссылок.",
+                restrictedView: "Для этой ссылки включён скрытый режим настроек.",
+                copied: "Скопировано в буфер обмена",
+                copyFailed: "На этом устройстве недоступен буфер обмена.",
+                close: "Закрыть",
+                noNotes: "Для этой подписки примечания не настроены.",
+                noApps: "Для этой платформы пока нет настроенных приложений.",
+                choosePlatform: "Выберите платформу",
+                chooseApp: "Выберите приложение",
+                chooseFormat: "Выберите формат",
+                rawLink: "Raw ссылка",
+                importFormat: "Формат импорта",
+                supportLink: "Ссылка поддержки",
+                directSubscription: "Прямая подписка",
+                hiddenSettings: "Для этой ссылки активирован скрытый режим настроек.",
+                showSection: "Открыть",
+                hideSection: "Скрыть",
+            },
+            fa: {
+                brandSubtitle: "صفحه هوشمند اشتراک",
+                heroTitle: "مرکز اشتراک Flew شما",
+                heroCopy: "برنامه مناسب دستگاه خود را انتخاب کنید، بهترین لینک ایمپورت را کپی کنید و همه فرمت‌های اشتراک را از یک صفحه مدیریت کنید.",
+                username: "نام کاربری",
+                status: "وضعیت",
+                expires: "انقضا",
+                used: "ترافیک مصرف شده",
+                limit: "سقف ترافیک",
+                lifetime: "کل ترافیک",
+                daysLeft: "روز باقی‌مانده",
+                detected: "دستگاه شناسایی‌شده",
+                unknownDevice: "دستگاه نامشخص",
+                platformTitle: "نصب و اتصال",
+                platformCopy: "این صفحه پلتفرم را تشخیص می‌دهد و کلاینت‌ها و لینک‌های مناسب را پیشنهاد می‌کند.",
+                formatsTitle: "فرمت‌های سریع",
+                formatsCopy: "از همین اشتراک در کلاینت‌ها و پروفایل‌های مختلف استفاده کنید.",
+                rawTitle: "کلیدها و لینک‌های مستقیم",
+                rawCopy: "لینک‌های مستقیم V2Ray برای این اشتراک.",
+                notesTitle: "یادداشت‌ها و اعلان‌ها",
+                notesCopy: "یادداشت‌های سفارشی، نکته‌های پشتیبانی و announce از تنظیمات پنل.",
+                supportTitle: "پشتیبانی",
+                supportCopy: "اگر برای راه‌اندازی کمک می‌خواهید یا می‌خواهید لینک را روی دستگاه دیگری باز کنید، از دکمه‌های زیر استفاده کنید.",
+                summaryTitle: "خلاصه اشتراک",
+                summaryCopy: "مصرف، محدودیت و تاریخ انقضای این حساب.",
+                copySubscription: "کپی اشتراک",
+                copyLink: "کپی لینک",
+                getApp: "دریافت برنامه",
+                openInApp: "باز کردن در برنامه",
+                autoImport: "دکمه زیر را بزنید تا برنامه باز شود و این اشتراک را به صورت خودکار اضافه کند.",
+                openSupport: "باز کردن پشتیبانی",
+                copySupport: "کپی لینک پشتیبانی",
+                emptyLinks: "برای این اشتراک لینک مستقیمی وجود ندارد.",
+                restrictedView: "حالت مخفی برای این لینک فعال است.",
+                copied: "در کلیپ‌بورد کپی شد",
+                copyFailed: "کلیپ‌بورد روی این دستگاه در دسترس نیست.",
+                close: "بستن",
+                noNotes: "برای این اشتراک یادداشتی تنظیم نشده است.",
+                noApps: "هنوز برنامه‌ای برای این پلتفرم تنظیم نشده است.",
+                choosePlatform: "انتخاب پلتفرم",
+                chooseApp: "انتخاب برنامه",
+                chooseFormat: "انتخاب فرمت",
+                rawLink: "لینک خام",
+                importFormat: "فرمت ایمپورت",
+                supportLink: "لینک پشتیبانی",
+                directSubscription: "اشتراک مستقیم",
+                hiddenSettings: "حالت مخفی تنظیمات برای این لینک فعال است.",
+                showSection: "باز کردن",
+                hideSection: "بستن",
+            },
+            zh: {
+                brandSubtitle: "智能订阅页面",
+                heroTitle: "你的 Flew 订阅中心",
+                heroCopy: "为你的设备选择合适的应用，复制最佳导入链接，并在一个页面中管理所有订阅格式。",
+                username: "用户名",
+                status: "状态",
+                expires: "到期时间",
+                used: "已用流量",
+                limit: "流量上限",
+                lifetime: "累计流量",
+                daysLeft: "剩余天数",
+                detected: "检测到的设备",
+                unknownDevice: "未知设备",
+                platformTitle: "安装与连接",
+                platformCopy: "页面会自动识别平台，并推荐合适的客户端和导入链接。",
+                formatsTitle: "快速格式",
+                formatsCopy: "同一个订阅可用于不同客户端和配置格式。",
+                rawTitle: "Raw 密钥与直连链接",
+                rawCopy: "为该订阅生成的直接 V2Ray 链接。",
+                notesTitle: "备注与公告",
+                notesCopy: "来自面板设置的自定义备注、支持提示和 announce。",
+                supportTitle: "支持",
+                supportCopy: "如果你需要配置帮助，或想在其他设备上打开链接，可以使用下面的操作。",
+                summaryTitle: "订阅概览",
+                summaryCopy: "当前账户的使用情况、限制和到期时间。",
+                copySubscription: "复制订阅",
+                copyLink: "复制链接",
+                getApp: "获取应用",
+                openInApp: "在应用中打开",
+                autoImport: "点击下面的按钮，客户端会尝试自动打开并导入这个订阅。",
+                openSupport: "打开支持",
+                copySupport: "复制支持链接",
+                emptyLinks: "该订阅暂时没有 raw 链接。",
+                restrictedView: "该链接已启用隐藏设置模式。",
+                copied: "已复制到剪贴板",
+                copyFailed: "该设备无法访问剪贴板。",
+                close: "关闭",
+                noNotes: "该订阅暂无备注。",
+                noApps: "该平台暂时没有可用应用。",
+                choosePlatform: "选择平台",
+                chooseApp: "选择应用",
+                chooseFormat: "选择格式",
+                rawLink: "Raw 链接",
+                importFormat: "导入格式",
+                supportLink: "支持链接",
+                directSubscription: "直接订阅",
+                hiddenSettings: "该链接已启用隐藏设置模式。",
+                showSection: "展开",
+                hideSection: "收起",
+            }
+        };
+
+        function decodePayload() {
+            const raw = document.getElementById("pagePayload").textContent.trim();
+            const binary = atob(raw);
+            const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+            return JSON.parse(new TextDecoder().decode(bytes));
+        }
+
+        const payload = decodePayload();
+
+        function getLocale() {
+            const lang = (navigator.language || "en").toLowerCase();
+            if (lang.startsWith("ru")) return "ru";
+            if (lang.startsWith("fa")) return "fa";
+            if (lang.startsWith("zh")) return "zh";
+            return "en";
+        }
+
+        const locale = getLocale();
+        const t = TRANSLATIONS[locale] || TRANSLATIONS.en;
+
+        if (locale === "fa") {
+            document.documentElement.lang = "fa";
+            document.documentElement.dir = "rtl";
+        } else {
+            document.documentElement.lang = locale;
+        }
+
+        function text(id, value) {
+            const node = document.getElementById(id);
+            if (node) node.textContent = value;
+        }
+
+        function platformOrder() {
+            return ["ios", "android", "windows", "macos", "linux", "android_tv", "apple_tv"];
+        }
+
+        function detectPlatform() {
+            const ua = navigator.userAgent || "";
+            const platform = navigator.platform || "";
+            const maxTouchPoints = navigator.maxTouchPoints || 0;
+
+            if (/AppleTV|Apple TV/i.test(ua)) return "apple_tv";
+            if (/Android/i.test(ua) && /(tv|aft|bravia|smarttv|googletv)/i.test(ua)) return "android_tv";
+            if (/Android/i.test(ua)) return "android";
+            if (/iPad|iPhone|iPod/i.test(ua)) return "ios";
+            if (platform === "MacIntel" && maxTouchPoints > 1) return "ios";
+            if (/Windows/i.test(ua)) return "windows";
+            if (/Macintosh|Mac OS X/i.test(ua)) return "macos";
+            if (/Linux/i.test(ua)) return "linux";
+            return platformOrder().find((key) => payload.catalog[key]) || "android";
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function platformLabel(key) {
+            return payload.catalog[key] ? payload.catalog[key].label : key;
+        }
+
+        function statusLabel() {
+            const map = {
+                active: { en: "Active", ru: "Активен", fa: "فعال", zh: "活跃" },
+                limited: { en: "Limited", ru: "Ограничен", fa: "محدود", zh: "受限" },
+                expired: { en: "Expired", ru: "Истек", fa: "منقضی", zh: "已过期" },
+                disabled: { en: "Disabled", ru: "Отключен", fa: "غیرفعال", zh: "غیرفعال" },
+                on_hold: { en: "On hold", ru: "Ожидание", fa: "در انتظار", zh: "等待中" },
+            };
+            const status = payload.user.status.value;
+            return (map[status] && map[status][locale]) || payload.user.status.label;
+        }
+
+        function showToast(message) {
+            const stack = document.getElementById("toastStack");
+            const toast = document.createElement("div");
+            toast.className = "toast";
+            toast.textContent = message;
+            stack.appendChild(toast);
+            setTimeout(() => toast.remove(), 2600);
+        }
+
+        async function copyText(value) {
+            const textValue = String(value || "");
+            if (!textValue) return;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(textValue);
+                } else {
+                    const area = document.createElement("textarea");
+                    area.value = textValue;
+                    area.setAttribute("readonly", "true");
+                    area.className = "visually-hidden";
+                    document.body.appendChild(area);
+                    area.select();
+                    document.execCommand("copy");
+                    area.remove();
+                }
+                showToast(t.copied);
+            } catch (error) {
+                window.prompt(t.copyFailed, textValue);
+            }
+        }
+
+        function toBase64(value) {
+            try {
+                return btoa(unescape(encodeURIComponent(String(value))));
+            } catch (error) {
+                return btoa(String(value));
+            }
+        }
+
+        function resolveFormatUrl(format) {
+            const links = payload.subscription.clientLinks;
+            if (format === "happ_v5") return payload.subscription.happ.v5;
+            if (format === "happ_v4") return payload.subscription.happ.v4;
+            if (format === "happ_v3") return payload.subscription.happ.v3;
+            if (format === "clash_meta") return links.clash_meta;
+            if (format === "sing_box") return links.sing_box;
+            if (format === "outline") return links.outline;
+            if (format === "v2ray_json") return links.v2ray_json;
+            if (format === "v2ray") return links.v2ray;
+            return links.auto;
+        }
+
+        function buildLaunchUrl(app) {
+            if (!app) return "";
+            if (app.launch_mode === "page_url") {
+                const pageUrl = payload.subscription.pageUrl || "";
+                if (!pageUrl) return "";
+                return app.launch_scheme ? `${app.launch_scheme}${pageUrl}` : pageUrl;
+            }
+            if (!app.launch_scheme) return "";
+            const importUrl = resolveFormatUrl(app.format);
+            if (!importUrl) return "";
+            if (app.launch_mode === "base64") {
+                return `${app.launch_scheme}${toBase64(importUrl)}`;
+            }
+            if (app.launch_mode === "encoded") {
+                return `${app.launch_scheme}${encodeURIComponent(importUrl)}`;
+            }
+            return `${app.launch_scheme}${importUrl}`;
+        }
+
+        function openAppImport(app) {
+            const launchUrl = buildLaunchUrl(app);
+            if (!launchUrl) {
+                if (app && app.install_url) {
+                    window.open(app.install_url, "_blank");
+                }
+                return;
+            }
+            window.location.href = launchUrl;
+        }
+
+        function renderIdentity() {
+            const pills = document.getElementById("identityPills");
+            pills.innerHTML = "";
+            const items = [
+                `${t.username}: ${payload.user.username}`,
+                `${t.status}: ${statusLabel()}`,
+                `${t.expires}: ${payload.user.expiresAt}`,
+            ];
+
+            items.forEach((item, index) => {
+                const pill = document.createElement("div");
+                pill.className = "pill" + (index === 1 ? ` ${payload.user.status.variant}` : "");
+                pill.textContent = item;
+                pills.appendChild(pill);
+            });
+        }
+
+        function renderHeroActions() {
+            const actions = document.getElementById("heroActions");
+            actions.innerHTML = "";
+
+            const buttons = [
+                {
+                    label: t.copySubscription,
+                    className: "btn btn-primary",
+                    onClick: () => copyText(payload.subscription.pageUrl),
+                },
+            ];
+
+            buttons.forEach((item) => {
+                const button = document.createElement("button");
+                button.className = item.className;
+                button.type = "button";
+                button.textContent = item.label;
+                button.addEventListener("click", item.onClick);
+                actions.appendChild(button);
+            });
+        }
+
+        function renderSummary() {
+            const summary = document.getElementById("summaryGrid");
+            summary.innerHTML = "";
+            const items = [
+                { label: t.used, value: payload.user.usedTraffic },
+                { label: t.limit, value: payload.user.trafficLimit },
+                { label: t.lifetime, value: payload.user.lifetimeTraffic },
+                { label: t.expires, value: payload.user.expiresAt },
+                { label: t.daysLeft, value: payload.user.daysLeft == null ? "∞" : String(payload.user.daysLeft) },
+            ];
+            items.forEach((item) => {
+                const card = document.createElement("div");
+                card.className = "summary-card";
+                card.innerHTML = `<div class="summary-label">${escapeHtml(item.label)}</div><div class="summary-value">${escapeHtml(item.value)}</div>`;
+                summary.appendChild(card);
+            });
+        }
+
+        let activePlatform = null;
+        let activeAppId = null;
+        let activeFormatId = payload.subscription.quickLinks[0] ? payload.subscription.quickLinks[0].id : null;
+
+        function renderPlatformTabs(activeKey) {
+            const tabs = document.getElementById("platformTabs");
+            tabs.innerHTML = "";
+            platformOrder()
+                .filter((key) => payload.catalog[key])
+                .forEach((key) => {
+                    const tab = document.createElement("button");
+                    tab.type = "button";
+                    tab.className = "tab-btn" + (key === activeKey ? " active" : "");
+                    tab.innerHTML = `${escapeHtml(payload.catalog[key].label)}<small>${escapeHtml(payload.catalog[key].hint || "")}</small>`;
+                    tab.addEventListener("click", () => {
+                        renderPlatformTabs(key);
+                        renderApps(key);
+                    });
+                    tabs.appendChild(tab);
+                });
+        }
+
+        function renderAppChoices(platformKey, selectedAppId) {
+            const tabs = document.getElementById("appChoiceTabs");
+            const info = payload.catalog[platformKey];
+            tabs.innerHTML = "";
+
+            if (!info || !Array.isArray(info.apps) || !info.apps.length) {
+                return;
+            }
+
+            info.apps.forEach((app) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "selector-btn" + (app.id === selectedAppId ? " active" : "");
+                button.innerHTML = `${escapeHtml(app.name)}<small>${escapeHtml(app.format || "")}</small>`;
+                button.addEventListener("click", () => renderApps(platformKey, app.id));
+                tabs.appendChild(button);
+            });
+        }
+
+        function renderAppDetail(platformKey, selectedAppId) {
+            const panel = document.getElementById("appDetail");
+            const info = payload.catalog[platformKey];
+            const app = (info && Array.isArray(info.apps) ? info.apps : []).find((entry) => entry.id === selectedAppId);
+            panel.innerHTML = "";
+
+            if (!app) {
+                panel.innerHTML = `<div class="empty-state">${escapeHtml(t.noApps)}</div>`;
+                return;
+            }
+
+            const card = document.createElement("article");
+            card.className = "detail-card";
+            card.innerHTML = `
+                <div class="detail-tag">${escapeHtml(app.name)}</div>
+                <h3>${escapeHtml(app.name)}</h3>
+                <p class="detail-copy">${escapeHtml(app.tagline || "")}</p>
+                <p class="detail-copy">${escapeHtml(t.autoImport)}</p>
+                <div class="detail-actions"></div>
+            `;
+            const actions = card.querySelector(".detail-actions");
+
+            if (app.install_url) {
+                const installBtn = document.createElement("button");
+                installBtn.type = "button";
+                installBtn.className = "mini-btn";
+                installBtn.textContent = t.getApp;
+                installBtn.addEventListener("click", () => window.open(app.install_url, "_blank"));
+                actions.appendChild(installBtn);
+            }
+
+            if (buildLaunchUrl(app)) {
+                const openBtn = document.createElement("button");
+                openBtn.type = "button";
+                openBtn.className = "mini-btn";
+                openBtn.textContent = t.openInApp;
+                openBtn.addEventListener("click", () => openAppImport(app));
+                actions.appendChild(openBtn);
+            }
+
+            panel.appendChild(card);
+        }
+
+        function renderApps(platformKey, selectedAppId) {
+            const detected = document.getElementById("detectedBadge");
+            const info = payload.catalog[platformKey];
+            detected.textContent = `${t.detected}: ${platformLabel(platformKey)}`;
+            activePlatform = platformKey;
+
+            if (!info || !Array.isArray(info.apps) || !info.apps.length) {
+                document.getElementById("appChoiceTabs").innerHTML = "";
+                document.getElementById("appDetail").innerHTML = `<div class="empty-state">${escapeHtml(t.noApps)}</div>`;
+                return;
+            }
+
+            activeAppId = info.apps.some((entry) => entry.id === selectedAppId) ? selectedAppId : info.apps[0].id;
+            renderAppChoices(platformKey, activeAppId);
+            renderAppDetail(platformKey, activeAppId);
+        }
+
+        function renderFormatSelectors(selectedFormatId) {
+            const tabs = document.getElementById("formatTabs");
+            tabs.innerHTML = "";
+            payload.subscription.quickLinks.forEach((item) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "selector-btn" + (item.id === selectedFormatId ? " active" : "");
+                button.innerHTML = `${escapeHtml(item.label)}<small>${escapeHtml(t.importFormat)}</small>`;
+                button.addEventListener("click", () => renderFormats(item.id));
+                tabs.appendChild(button);
+            });
+        }
+
+        function renderFormatDetail(selectedFormatId) {
+            const panel = document.getElementById("formatDetail");
+            const selected = payload.subscription.quickLinks.find((item) => item.id === selectedFormatId) || payload.subscription.quickLinks[0];
+            panel.innerHTML = "";
+
+            if (!selected) {
+                panel.innerHTML = `<div class="empty-state">${escapeHtml(t.chooseFormat)}</div>`;
+                return;
+            }
+
+            const card = document.createElement("article");
+            card.className = "detail-card";
+            card.innerHTML = `
+                <div class="detail-tag">${escapeHtml(selected.label)}</div>
+                <h3>${escapeHtml(selected.label)}</h3>
+                <p class="detail-copy">${escapeHtml(t.importFormat)}</p>
+                <div class="detail-linkbox">
+                    <div class="summary-label">${escapeHtml(t.directSubscription)}</div>
+                    <div class="detail-link">${escapeHtml(selected.url)}</div>
+                </div>
+                <div class="detail-actions"></div>
+            `;
+            const actions = card.querySelector(".detail-actions");
+
+            const copyBtn = document.createElement("button");
+            copyBtn.type = "button";
+            copyBtn.className = "mini-btn";
+            copyBtn.textContent = t.copyLink;
+            copyBtn.addEventListener("click", () => copyText(selected.url));
+            actions.appendChild(copyBtn);
+
+            panel.appendChild(card);
+        }
+
+        function renderFormats(selectedFormatId) {
+            activeFormatId = payload.subscription.quickLinks.some((item) => item.id === selectedFormatId)
+                ? selectedFormatId
+                : (payload.subscription.quickLinks[0] && payload.subscription.quickLinks[0].id);
+            renderFormatSelectors(activeFormatId);
+            renderFormatDetail(activeFormatId);
+        }
+
+        function renderRawLinks() {
+            const section = document.getElementById("rawLinksSection");
+            const grid = document.getElementById("rawLinks");
+            if (payload.subscription.hideSettings) {
+                grid.innerHTML = `<div class="empty-state">${escapeHtml(t.restrictedView)}<br>${escapeHtml(t.hiddenSettings)}</div>`;
+                return;
+            }
+
+            if (!payload.user.links.length) {
+                grid.innerHTML = `<div class="empty-state">${escapeHtml(t.emptyLinks)}</div>`;
+                return;
+            }
+
+            grid.innerHTML = "";
+            payload.user.links.forEach((link, index) => {
+                const card = document.createElement("article");
+                card.className = "link-card";
+                card.innerHTML = `
+                    <div class="link-card-head">
+                        <div>
+                            <div class="link-index">${escapeHtml(t.rawLink)} ${index + 1}</div>
+                            <div class="link-value">${escapeHtml(link)}</div>
+                        </div>
+                        <div class="link-actions"></div>
+                    </div>
+                `;
+                const actions = card.querySelector(".link-actions");
+                const copyBtn = document.createElement("button");
+                copyBtn.type = "button";
+                copyBtn.className = "mini-btn";
+                copyBtn.textContent = t.copyLink;
+                copyBtn.addEventListener("click", () => copyText(link));
+                actions.appendChild(copyBtn);
+                grid.appendChild(card);
+            });
+        }
+
+        function renderNotes() {
+            const notes = document.getElementById("notesList");
+            notes.innerHTML = "";
+            const userNotes = Array.isArray(payload.user.remarks) ? payload.user.remarks.filter(Boolean) : [];
+            if (payload.user.announce) {
+                const card = document.createElement("article");
+                card.className = "note-card announce-card";
+                card.textContent = payload.user.announce;
+                notes.appendChild(card);
+            }
+
+            userNotes.forEach((remark) => {
+                const card = document.createElement("article");
+                card.className = "note-card";
+                card.textContent = remark;
+                notes.appendChild(card);
+            });
+
+            if (!notes.children.length) {
+                notes.innerHTML = `<div class="empty-state">${escapeHtml(t.noNotes)}</div>`;
+            }
+        }
+
+        function setSectionOpen(bodyId, buttonId, isOpen) {
+            const body = document.getElementById(bodyId);
+            const button = document.getElementById(buttonId);
+            if (!body || !button) return;
+            body.hidden = !isOpen;
+            button.textContent = isOpen ? t.hideSection : t.showSection;
+            button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        }
+
+        function bindSectionToggle(bodyId, buttonId) {
+            const button = document.getElementById(buttonId);
+            if (!button) return;
+            button.addEventListener("click", () => {
+                const body = document.getElementById(bodyId);
+                setSectionOpen(bodyId, buttonId, !!body && body.hidden);
+            });
+        }
+
+        function renderSupport() {
+            const card = document.getElementById("supportCard");
+            card.innerHTML = "";
+
+            const items = [];
+            items.push(`<h3>${escapeHtml(payload.branding.title)}</h3>`);
+            items.push(`<p class="section-copy">${escapeHtml(payload.subscription.pageUrl)}</p>`);
+
+            if (payload.branding.supportLink) {
+                items.push(`<div class="summary-label">${escapeHtml(t.supportLink)}</div>`);
+                items.push(`<a class="support-link" href="${escapeHtml(payload.branding.supportLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(payload.branding.supportLink)}</a>`);
+            }
+
+            card.innerHTML = items.join("");
+
+            const actions = document.createElement("div");
+            actions.className = "support-actions";
+
+            const copySubscriptionBtn = document.createElement("button");
+            copySubscriptionBtn.type = "button";
+            copySubscriptionBtn.className = "mini-btn";
+            copySubscriptionBtn.textContent = t.copySubscription;
+            copySubscriptionBtn.addEventListener("click", () => copyText(payload.subscription.pageUrl));
+            actions.appendChild(copySubscriptionBtn);
+
+            if (payload.branding.supportLink) {
+                const openSupportBtn = document.createElement("button");
+                openSupportBtn.type = "button";
+                openSupportBtn.className = "mini-btn";
+                openSupportBtn.textContent = t.openSupport;
+                openSupportBtn.addEventListener("click", () => window.open(payload.branding.supportLink, "_blank"));
+                actions.appendChild(openSupportBtn);
+
+                const copySupportBtn = document.createElement("button");
+                copySupportBtn.type = "button";
+                copySupportBtn.className = "mini-btn";
+                copySupportBtn.textContent = t.copySupport;
+                copySupportBtn.addEventListener("click", () => copyText(payload.branding.supportLink));
+                actions.appendChild(copySupportBtn);
+            }
+
+            card.appendChild(actions);
+        }
+
+        function applyStaticTexts() {
+            text("brandTitle", payload.branding.title || "Flew");
+            text("brandSubtitle", t.brandSubtitle);
+            text("heroTitle", t.heroTitle);
+            text("heroCopy", t.heroCopy);
+            text("summaryTitle", t.summaryTitle);
+            text("summaryCopy", t.summaryCopy);
+            text("platformTitle", t.platformTitle);
+            text("platformCopy", t.platformCopy);
+            text("formatsTitle", t.formatsTitle);
+            text("formatsCopy", t.formatsCopy);
+            text("rawTitle", t.rawTitle);
+            text("rawCopy", t.rawCopy);
+            text("notesTitle", t.notesTitle);
+            text("notesCopy", t.notesCopy);
+            text("supportTitle", t.supportTitle);
+            text("supportCopy", t.supportCopy);
+            text("rawToggleBtn", t.showSection);
+            text("notesToggleBtn", t.showSection);
+            text("supportToggleBtn", t.showSection);
+        }
+
+        function init() {
+            applyStaticTexts();
+            renderIdentity();
+            renderHeroActions();
+            renderSummary();
+            renderNotes();
+
+            const detected = detectPlatform();
+            renderPlatformTabs(detected);
+            renderApps(detected);
+
+            setSectionOpen("notesBody", "notesToggleBtn", false);
+            bindSectionToggle("notesBody", "notesToggleBtn");
+
+        }
+
+        init();
+    </script>
+</body>
+</html>
