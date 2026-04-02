@@ -1,8 +1,0 @@
-services:
-  flew:
-    image: flew:latest
-    restart: always
-    env_file: .env
-    network_mode: host
-    volumes:
-      - /var/lib/flew:/var/lib/flew
