@@ -48,6 +48,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/Flew-Empire/Flew/main/in
   --password 'change-this-password'
 ```
 
+> If no domain is provided, the installer will automatically skip nginx and use HTTP on port 8000.
+
 After installation, open:
 
 - **With domain:** `https://panel.example.com/dashboard/`

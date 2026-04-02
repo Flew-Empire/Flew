@@ -57,9 +57,8 @@ if [ -z "$ADMIN_PASSWORD" ]; then
     exit 1
 fi
 
-if [ "$SKIP_NGINX" = false ] && [ -z "$PANEL_DOMAIN" ]; then
-    echo "Error: --domain is required (or use --skip-nginx)"
-    exit 1
+if [ -z "$PANEL_DOMAIN" ]; then
+    SKIP_NGINX=true
 fi
 
 install_packages() {
