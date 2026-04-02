@@ -216,12 +216,6 @@ INSTALL_RELEASES_DIR = config("INSTALL_RELEASES_DIR", default="releases").strip(
 INSTALL_CLIENT_SCRIPT = config(
     "INSTALL_CLIENT_SCRIPT", default="scripts/install_client.sh"
 ).strip()
-INSTALL_MARZBAN_PATCH_SCRIPT = config(
-    "INSTALL_MARZBAN_PATCH_SCRIPT", default="scripts/install_marzban_patch.sh"
-).strip()
-INSTALL_MARZBAN_PATCH_FILENAME = config(
-    "INSTALL_MARZBAN_PATCH_FILENAME", default="marzban-patch-{edition}.tar.gz"
-).strip()
 INSTALL_DOWNLOAD_TOKEN_TTL_SECONDS = config(
     "INSTALL_DOWNLOAD_TOKEN_TTL_SECONDS", cast=int, default=900
 )

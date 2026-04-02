@@ -20,15 +20,13 @@ from app.utils.edition_names import normalize_edition_name, valid_edition_names
 from config import (
     INSTALL_CLIENT_SCRIPT,
     INSTALL_DOWNLOAD_TOKEN_TTL_SECONDS,
-    INSTALL_MARZBAN_PATCH_FILENAME,
-    INSTALL_MARZBAN_PATCH_SCRIPT,
     INSTALL_RELEASES_DIR,
 )
 
 router = APIRouter(tags=["Install"], prefix="/api/install")
 
 _ALLOWED_EDITIONS = valid_edition_names()
-_ALLOWED_PRODUCTS = {"flew", "marzban_patch"}
+_ALLOWED_PRODUCTS = {"flew"}
 
 
 def _normalize_edition(value: str) -> str:
@@ -97,37 +95,8 @@ def _get_release_path(edition: str) -> Tuple[str, str]:
     return path, filename
 
 
-def _get_marzban_patch_path(edition: str) -> Tuple[str, str]:
-    raw = (INSTALL_MARZBAN_PATCH_FILENAME or "marzban-patch-{edition}.tar.gz").strip()
-    if "{edition}" in raw:
-        normalized = _normalize_edition(edition)
-        if not normalized or normalized not in _ALLOWED_EDITIONS:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid edition")
-        filename = raw.format(edition=normalized)
-    else:
-        filename = raw
-    if not filename:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Patch filename not configured")
-    path = os.path.join(_resolve_releases_dir(), filename)
-    if not os.path.isfile(path):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patch release not found")
-    return path, filename
-
-
 def _get_install_script_path() -> Tuple[str, str]:
     base = INSTALL_CLIENT_SCRIPT or "scripts/install_client.sh"
-    if os.path.isabs(base):
-        path = base
-    else:
-        path = os.path.abspath(os.path.join(os.getcwd(), base))
-
-    if not os.path.isfile(path):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Install script not found")
-    return path, os.path.basename(path)
-
-
-def _get_marzban_install_script_path() -> Tuple[str, str]:
-    base = INSTALL_MARZBAN_PATCH_SCRIPT or "scripts/install_marzban_patch.sh"
     if os.path.isabs(base):
         path = base
     else:
@@ -240,84 +209,6 @@ def exchange_install_otp(
     )
 
 
-@router.post("/marzban/otp/exchange", response_model=InstallDownloadTokenResponse)
-def exchange_marzban_patch_otp(
-    payload: InstallDownloadTokenRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    status_value, item = crud.verify_install_otp(db, payload.code, consume=False)
-    if status_value != "ok":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"status": status_value},
-        )
-
-    bound_ip = getattr(item, "bound_ip", None) if item else None
-    if bound_ip and not _ip_allowed(bound_ip, _get_client_ip(request)):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"status": "ip_mismatch"},
-        )
-
-    otp_product = _normalize_product(getattr(item, "product", None)) or "flew"
-    if otp_product not in _ALLOWED_PRODUCTS:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"status": "product_missing"},
-        )
-    if payload.product:
-        requested_product = _normalize_product(payload.product)
-        if requested_product and requested_product != otp_product:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"status": "product_mismatch"},
-            )
-    if otp_product != "marzban_patch":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"status": "product_mismatch"},
-        )
-
-    status_value, item = crud.verify_install_otp(db, payload.code, consume=True)
-    if status_value != "ok":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"status": status_value},
-        )
-
-    otp_edition = _normalize_edition(getattr(item, "edition", "") if item else "")
-    if not otp_edition or otp_edition not in _ALLOWED_EDITIONS:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"status": "edition_missing"},
-        )
-
-    if payload.edition:
-        requested = _normalize_edition(payload.edition)
-        if requested and requested != otp_edition:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"status": "edition_mismatch"},
-            )
-
-    _, filename = _get_marzban_patch_path(otp_edition)
-    token, expires_at = create_install_download_token(
-        edition=otp_edition,
-        product=otp_product,
-        filename=filename,
-        ttl_seconds=INSTALL_DOWNLOAD_TOKEN_TTL_SECONDS,
-    )
-    return InstallDownloadTokenResponse(
-        token=token,
-        expires_at=expires_at,
-        product=otp_product,
-        edition=otp_edition,
-        filename=filename,
-        download_path=f"/api/install/marzban/download?token={token}",
-    )
-
-
 @router.get("/download")
 def download_release(
     token: str = Query(...),
@@ -343,44 +234,9 @@ def download_release(
     )
 
 
-@router.get("/marzban/download")
-def download_marzban_patch(
-    token: str = Query(...),
-):
-    payload = verify_install_download_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
-
-    product = _normalize_product(payload.get("product")) or "flew"
-    if product != "marzban_patch":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
-
-    filename = payload.get("filename") or ""
-    edition = payload.get("edition") or ""
-    path, resolved_name = _get_marzban_patch_path(edition)
-    if filename and filename != resolved_name:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token")
-
-    return FileResponse(
-        path,
-        media_type="application/gzip",
-        filename=resolved_name,
-    )
-
-
 @router.get("/script")
 def download_install_script():
     path, filename = _get_install_script_path()
-    return FileResponse(
-        path,
-        media_type="text/x-shellscript",
-        filename=filename,
-    )
-
-
-@router.get("/marzban/script")
-def download_marzban_install_script():
-    path, filename = _get_marzban_install_script_path()
     return FileResponse(
         path,
         media_type="text/x-shellscript",
