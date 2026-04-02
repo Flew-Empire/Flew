@@ -1136,16 +1136,16 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-03-28T09:31:38.070941",
-          "last_seen_at": "2026-04-02T12:44:06.393305",
+          "last_seen_at": "2026-04-02T13:22:47.784068",
           "first_ip": "185.69.186.190",
           "last_ip": "109.172.95.95",
           "user_agent": "Happ/3.16.0/Android/1741613",
-          "seen_count": 87,
-          "updated_at": "2026-04-02T12:44:06.393305",
+          "seen_count": 92,
+          "updated_at": "2026-04-02T13:22:47.784068",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T12:44:06.393305"
+      "updated_at": "2026-04-02T13:22:47.784068"
     },
     "Eldar": {
       "limit": 1,
@@ -1812,12 +1812,12 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-03-29T04:40:27.561428",
-          "last_seen_at": "2026-04-02T12:36:22.413689",
+          "last_seen_at": "2026-04-02T13:32:12.332317",
           "first_ip": "185.69.186.79",
-          "last_ip": "185.69.186.87",
+          "last_ip": "185.69.186.233",
           "user_agent": "Happ/3.15.2/Android/1733665",
-          "seen_count": 51,
-          "updated_at": "2026-04-02T12:36:22.413689",
+          "seen_count": 53,
+          "updated_at": "2026-04-02T13:32:12.332317",
           "force_banned": false
         },
         "id:6a1725bee3a57c7f": {
@@ -1855,7 +1855,7 @@
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T12:36:22.413689"
+      "updated_at": "2026-04-02T13:32:12.332317"
     },
     "Genjemberdi": {
       "limit": 1,
@@ -2277,16 +2277,16 @@
           "device_type": "phone",
           "status": "allowed",
           "first_seen_at": "2026-03-29T08:31:59.572478",
-          "last_seen_at": "2026-04-02T10:56:51.004778",
+          "last_seen_at": "2026-04-02T13:38:53.211599",
           "first_ip": "95.85.104.119",
           "last_ip": "95.85.104.119",
           "user_agent": "Happ/4.6.0/ios/2603181556604",
-          "seen_count": 23,
-          "updated_at": "2026-04-02T10:56:51.004778",
+          "seen_count": 24,
+          "updated_at": "2026-04-02T13:38:53.211599",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T10:56:51.004778"
+      "updated_at": "2026-04-02T13:38:53.211599"
     },
     "vazira": {
       "limit": 1,
@@ -2301,12 +2301,12 @@
           "device_type": "phone",
           "status": "allowed",
           "first_seen_at": "2026-03-29T11:46:01.683489",
-          "last_seen_at": "2026-04-02T10:42:06.005812",
+          "last_seen_at": "2026-04-02T13:41:54.505511",
           "first_ip": "95.85.102.12",
-          "last_ip": "93.171.221.12",
+          "last_ip": "109.172.95.95",
           "user_agent": "Happ/4.6.0/ios/2603181556604",
-          "seen_count": 39,
-          "updated_at": "2026-04-02T10:42:06.005812",
+          "seen_count": 41,
+          "updated_at": "2026-04-02T13:41:54.505511",
           "force_banned": false
         },
         "fp:87ffa28f6f0e074551b1353c": {
@@ -2327,7 +2327,7 @@
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T10:42:06.005812"
+      "updated_at": "2026-04-02T13:41:54.505511"
     },
     "G_Bahar": {
       "limit": 1,
@@ -2906,16 +2906,16 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-03-30T07:11:42.873233",
-          "last_seen_at": "2026-04-02T01:47:02.555659",
+          "last_seen_at": "2026-04-02T13:38:53.426389",
           "first_ip": "93.171.221.72",
           "last_ip": "93.171.221.72",
-          "user_agent": "Happ/3.16.0/Android/1741613",
-          "seen_count": 44,
-          "updated_at": "2026-04-02T01:47:02.555659",
+          "user_agent": "Happ/3.16.1/Android/1743695",
+          "seen_count": 47,
+          "updated_at": "2026-04-02T13:38:53.426389",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T01:47:02.555659"
+      "updated_at": "2026-04-02T13:38:53.426389"
     },
     "Nelya": {
       "limit": 1,
@@ -3398,16 +3398,16 @@
           "device_type": "phone",
           "status": "allowed",
           "first_seen_at": "2026-03-31T06:49:57.528606",
-          "last_seen_at": "2026-04-02T11:33:32.294288",
+          "last_seen_at": "2026-04-02T13:43:02.301488",
           "first_ip": "95.85.106.166",
           "last_ip": "109.172.95.95",
           "user_agent": "Happ/4.6.0/ios/2603181556604",
-          "seen_count": 24,
-          "updated_at": "2026-04-02T11:33:32.294288",
+          "seen_count": 26,
+          "updated_at": "2026-04-02T13:43:02.301488",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T11:33:32.294288"
+      "updated_at": "2026-04-02T13:43:02.301488"
     },
     "Guwanch": {
       "limit": 1,
@@ -3439,16 +3439,16 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-03-30T17:52:10.370515",
-          "last_seen_at": "2026-04-02T09:32:47.132149",
+          "last_seen_at": "2026-04-02T13:36:06.650691",
           "first_ip": "185.69.186.221",
-          "last_ip": "185.69.186.124",
+          "last_ip": "109.172.95.95",
           "user_agent": "Happ/3.15.2/Android/1733665",
-          "seen_count": 11,
-          "updated_at": "2026-04-02T09:32:47.132149",
+          "seen_count": 12,
+          "updated_at": "2026-04-02T13:36:06.650691",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T09:32:47.132149"
+      "updated_at": "2026-04-02T13:36:06.650691"
     },
     "Kamiljanb": {
       "limit": 1,
@@ -4608,16 +4608,16 @@
           "device_type": "phone",
           "status": "allowed",
           "first_seen_at": "2026-03-31T15:49:35.506050",
-          "last_seen_at": "2026-04-02T13:00:22.030360",
+          "last_seen_at": "2026-04-02T13:39:08.601047",
           "first_ip": "95.85.100.59",
           "last_ip": "109.172.95.95",
           "user_agent": "Happ/4.6.0/ios/2603181556604",
-          "seen_count": 14,
-          "updated_at": "2026-04-02T13:00:22.030360",
+          "seen_count": 18,
+          "updated_at": "2026-04-02T13:39:08.601047",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T13:00:22.030360"
+      "updated_at": "2026-04-02T13:39:08.601047"
     },
     "N_Eje": {
       "devices": {},
@@ -4761,16 +4761,16 @@
           "device_type": "phone",
           "status": "allowed",
           "first_seen_at": "2026-03-31T17:30:43.545194",
-          "last_seen_at": "2026-04-02T12:03:04.482888",
+          "last_seen_at": "2026-04-02T13:18:53.633362",
           "first_ip": "185.69.186.88",
-          "last_ip": "185.69.186.10",
+          "last_ip": "95.85.104.144",
           "user_agent": "Happ/4.6.0/ios/2603181556604",
-          "seen_count": 17,
-          "updated_at": "2026-04-02T12:03:04.482888",
+          "seen_count": 19,
+          "updated_at": "2026-04-02T13:18:53.633362",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T12:03:04.482888"
+      "updated_at": "2026-04-02T13:18:53.633362"
     },
     "Vepa": {
       "limit": 1,
@@ -4964,7 +4964,7 @@
           "model": "24117RN76O",
           "os": "Android",
           "device_type": "tablet",
-          "status": "allowed",
+          "status": "banned",
           "first_seen_at": "2026-04-01T16:37:04.646279",
           "last_seen_at": "2026-04-02T12:25:19.023486",
           "first_ip": "93.171.220.139",
@@ -4981,18 +4981,18 @@
           "model": "Unknown",
           "os": "Android",
           "device_type": "tablet",
-          "status": "banned",
+          "status": "allowed",
           "first_seen_at": "2026-04-02T11:24:23.447179",
-          "last_seen_at": "2026-04-02T11:24:23.447179",
+          "last_seen_at": "2026-04-02T13:40:09.244155",
           "first_ip": "95.85.100.252",
-          "last_ip": "95.85.100.252",
+          "last_ip": "154.205.134.155",
           "user_agent": "HiddifyNext/4.1.1 (android) like ClashMeta v2ray sing-box",
-          "seen_count": 1,
-          "updated_at": "2026-04-02T11:24:23.447179",
+          "seen_count": 5,
+          "updated_at": "2026-04-02T13:40:09.244155",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T12:25:19.023486"
+      "updated_at": "2026-04-02T13:40:09.244155"
     },
     "G_Omar": {
       "limit": 1,
@@ -5007,16 +5007,16 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-04-01T02:25:53.318950",
-          "last_seen_at": "2026-04-02T02:27:47.904057",
+          "last_seen_at": "2026-04-02T13:20:16.639030",
           "first_ip": "185.69.185.165",
-          "last_ip": "185.69.185.165",
-          "user_agent": "Happ/3.16.0/Android/1741613",
-          "seen_count": 6,
-          "updated_at": "2026-04-02T02:27:47.904057",
+          "last_ip": "185.69.185.170",
+          "user_agent": "Happ/3.16.1/Android/1743695",
+          "seen_count": 10,
+          "updated_at": "2026-04-02T13:20:16.639030",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T02:27:47.904057"
+      "updated_at": "2026-04-02T13:20:16.639030"
     },
     "G_AtajanHasanow": {
       "limit": 1,
@@ -5055,16 +5055,16 @@
           "device_type": "tablet",
           "status": "allowed",
           "first_seen_at": "2026-04-01T08:58:58.388153",
-          "last_seen_at": "2026-04-02T11:17:12.559229",
+          "last_seen_at": "2026-04-02T13:31:47.651094",
           "first_ip": "185.69.186.142",
-          "last_ip": "95.85.99.25",
+          "last_ip": "95.85.99.231",
           "user_agent": "Happ/3.16.0/Android/1741613",
-          "seen_count": 21,
-          "updated_at": "2026-04-02T11:17:12.559229",
+          "seen_count": 22,
+          "updated_at": "2026-04-02T13:31:47.651094",
           "force_banned": false
         }
       },
-      "updated_at": "2026-04-02T11:17:12.559229"
+      "updated_at": "2026-04-02T13:31:47.651094"
     },
     "ahmedowa": {
       "limit": 1,

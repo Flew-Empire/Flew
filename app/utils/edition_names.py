@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Iterable, Set
 
-CANONICAL_EDITIONS = ("start", "pro", "x")
+CANONICAL_EDITIONS = ("free", "start", "pro", "x")
 
 EDITION_ALIASES = {
-    "standard": "start",
+    "free": "free",
+    "standard": "free",
     "start": "start",
     "full": "pro",
     "pro": "pro",
