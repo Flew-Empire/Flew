@@ -1,6 +1,10 @@
-<img src="https://raw.githubusercontent.com/Flew-Empire/Flew/main/app/dashboard/build/logo.svg" width="200">
+<p align="center">
+  <a href="https://t.me/Flewcreator">
+    <img src="https://raw.githubusercontent.com/Flew-Empire/Flew/main/app/dashboard/build/logo.svg" width="300">
+  </a>
+</p>
 
-# Flew Free
+<h1 align="center">Flew Free</h1>
 
 Flew Free is the free edition of the Flew panel by Flew Empire.
 
