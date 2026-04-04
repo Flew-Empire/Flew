@@ -3,7 +3,7 @@ import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { Footer } from "components/Footer";
 import { Header } from "components/Header";
 import { WorkspaceDialogs } from "components/WorkspaceDialogs";
-import { fetchInbounds } from "contexts/DashboardContext";
+import { fetchInbounds, useDashboard } from "contexts/DashboardContext";
 import { FC, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation, useNavigate, useNavigation } from "react-router-dom";
@@ -20,12 +20,17 @@ export const WorkspaceLayout: FC = () => {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const hasInbounds = useDashboard((state) => state.inbounds.size > 0);
 
   useEffect(() => {
+    if (hasInbounds) {
+      return;
+    }
+
     fetchInbounds().catch((error) => {
       console.error("Failed to fetch inbounds for workspace layout:", error);
     });
-  }, []);
+  }, [hasInbounds]);
 
   const isHome = location.pathname === "/";
 

@@ -20,7 +20,7 @@ import {
   useRadioGroup,
 } from "@chakra-ui/react";
 import { CalendarIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { ApexOptions } from "apexcharts";
+import type { ApexOptions } from "apexcharts";
 import { FilterUsageType } from "contexts/DashboardContext";
 import dayjs, { ManipulateType } from "dayjs";
 import { FC, useRef, useState } from "react";

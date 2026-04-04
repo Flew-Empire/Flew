@@ -12,6 +12,16 @@ type UsersResponse = {
   total: number;
 };
 
+const sanitizeQueryObject = <T extends Record<string, any>>(query: T): Partial<T> => {
+  const entries = Object.entries(query).filter(([, value]) => {
+    if (value === undefined || value === null) return false;
+    if (typeof value === "string" && value.length === 0) return false;
+    return true;
+  });
+
+  return Object.fromEntries(entries) as Partial<T>;
+};
+
 export type FilterType = {
   search?: string;
   limit?: number;
@@ -99,11 +109,9 @@ type DashboardStateType = {
 };
 
 const fetchUsers = (query: FilterType): Promise<UsersResponse> => {
-  for (const key in query) {
-    if (!query[key as keyof FilterType]) delete query[key as keyof FilterType];
-  }
+  const sanitizedQuery = sanitizeQueryObject(query);
   useDashboard.setState({ loading: true });
-  return fetch("/users", { query })
+  return fetch("/users", { query: sanitizedQuery })
     .then((users: UsersResponse) => {
       useDashboard.setState({ users });
       useDashboard.setState({ hasFetchedUsers: true });
@@ -287,13 +295,10 @@ export const useDashboard = create(
       });
     },
     fetchUserUsage: (body: User, query: FilterUsageType) => {
-      for (const key in query) {
-        if (!query[key as keyof FilterUsageType])
-          delete query[key as keyof FilterUsageType];
-      }
+      const sanitizedQuery = sanitizeQueryObject(query);
       return fetch(`/user/${encodeURIComponent(body.username)}/usage`, {
         method: "GET",
-        query,
+        query: sanitizedQuery,
       });
     },
     onEditingHosts: (isEditingHosts: boolean) => {

@@ -1,5 +1,5 @@
 import { ColorMode } from "@chakra-ui/react";
-import { ApexOptions } from "apexcharts";
+import type { ApexOptions } from "apexcharts";
 import { generateDistinctColors } from "utils/color";
 import { formatBytes } from "utils/formatByte";
 
