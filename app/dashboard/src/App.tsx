@@ -6,6 +6,35 @@ import { useColorMode } from "@chakra-ui/react";
 import { updateThemeColor } from "utils/themeColor";
 import { scheduleRoutePreload } from "pages/lazyRoutes";
 
+const shouldWarmCommonRoutes = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const connection = (navigator as Navigator & {
+    connection?: { saveData?: boolean; effectiveType?: string };
+    mozConnection?: { saveData?: boolean; effectiveType?: string };
+    webkitConnection?: { saveData?: boolean; effectiveType?: string };
+  }).connection ||
+    (navigator as any).mozConnection ||
+    (navigator as any).webkitConnection;
+
+  if (connection?.saveData) {
+    return false;
+  }
+
+  const effectiveType = String(connection?.effectiveType || "").toLowerCase();
+  if (
+    effectiveType === "slow-2g" ||
+    effectiveType.includes("2g") ||
+    effectiveType.includes("3g")
+  ) {
+    return false;
+  }
+
+  return window.innerWidth >= 1024;
+};
+
 function App() {
   const { colorMode, setColorMode } = useColorMode();
 
@@ -31,12 +60,11 @@ function App() {
   }, [colorMode]);
 
   useEffect(() => {
-    return scheduleRoutePreload([
-      "subscriptionEditor",
-      "inbounds",
-      "nodes",
-      "hosts",
-    ]);
+    if (!shouldWarmCommonRoutes()) {
+      return undefined;
+    }
+
+    return scheduleRoutePreload(["inbounds", "nodes", "hosts"]);
   }, []);
 
   return (

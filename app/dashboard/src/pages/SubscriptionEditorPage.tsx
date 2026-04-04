@@ -8,6 +8,7 @@ import {
   clearPrefetchedUserEditor,
   getPrefetchedUserEditor,
   isUserEditorNotFoundError,
+  isUserEditorUnavailableError,
 } from "utils/userEditorPrefetch";
 
 export const SubscriptionEditorPage: FC = () => {
@@ -42,12 +43,12 @@ export const SubscriptionEditorPage: FC = () => {
       try {
         setIsLoading(true);
         const user = await fetch(`/user/${encodeURIComponent(username)}`, {
-          ...( { silent404: true } as any ),
+          ...({ silent404: true, silent403: true } as any),
         });
         if (!alive) return;
         onEditingUser(user);
       } catch (error) {
-        if (!isUserEditorNotFoundError(error)) {
+        if (!isUserEditorUnavailableError(error)) {
           console.error("Failed to load user for subscription editor:", error);
         }
         if (alive) navigate("/", { replace: true });
