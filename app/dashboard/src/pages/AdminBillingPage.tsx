@@ -97,7 +97,7 @@ export const AdminBillingPage: FC = () => {
   const lastLoadedDetailRef = useRef("");
 
   const username = String(userData?.username || "").trim();
-  const isManager = username.toLowerCase() === "moor";
+  const isManager = !!userData?.is_sudo;
 
   const syncRateInput = useCallback((payload: AdminBillingDetail | null) => {
     setRateInput(payload?.unit_price_display || "");
@@ -111,7 +111,7 @@ export const AdminBillingPage: FC = () => {
       }
       const withDue = items.find((item) => item.current_total_cents > 0);
       if (withDue) return withDue.username;
-      const firstNonMain = items.find((item) => item.username.toLowerCase() !== "moor");
+      const firstNonMain = items.find((item) => !item.is_sudo);
       return firstNonMain?.username || items[0].username;
     },
     []

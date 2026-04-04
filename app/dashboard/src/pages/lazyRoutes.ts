@@ -5,34 +5,24 @@ type RouteModule = {
 };
 
 export type RoutePreloadKey =
-  | "adminBilling"
-  | "adminChat"
   | "adminAccounts"
   | "adminManager"
-  | "flew"
   | "inbounds"
   | "nodes"
   | "hosts"
   | "subscriptionEditor"
-  | "adminLimits"
-  | "cryptoLink"
   | "cryptoLinkSettings";
 
 const routeImporters: Record<RoutePreloadKey, () => Promise<RouteModule>> = {
-  adminBilling: () => import("./AdminBillingPage"),
-  adminChat: () => import("./AdminChatPage"),
   adminAccounts: () => import("./AdminAccountsPage"),
   adminManager: () =>
     import("./AdminManager").then((module) => ({
       default: module.AdminManager,
     })),
-  flew: () => import("./Flew"),
   inbounds: () => import("./InboundsPage"),
   nodes: () => import("./NodesPage"),
   hosts: () => import("./HostsPage"),
   subscriptionEditor: () => import("./SubscriptionEditorPage"),
-  adminLimits: () => import("./AdminLimitsPage"),
-  cryptoLink: () => import("./CryptoLinkPage"),
   cryptoLinkSettings: () => import("./CryptoLinkSettingsPage"),
 };
 
@@ -79,18 +69,13 @@ export const scheduleRoutePreload = (keys: RoutePreloadKey[]) => {
 };
 
 export const AdminAccountsPage = lazy(() => preloadRoute("adminAccounts"));
-export const AdminBillingPage = lazy(() => preloadRoute("adminBilling"));
-export const AdminChatPage = lazy(() => preloadRoute("adminChat"));
 export const AdminManagerPage = lazy(() => preloadRoute("adminManager"));
-export const FlewPage = lazy(() => preloadRoute("flew"));
 export const InboundsPage = lazy(() => preloadRoute("inbounds"));
 export const NodesPage = lazy(() => preloadRoute("nodes"));
 export const HostsPage = lazy(() => preloadRoute("hosts"));
 export const SubscriptionEditorPage = lazy(() =>
   preloadRoute("subscriptionEditor")
 );
-export const AdminLimitsPage = lazy(() => preloadRoute("adminLimits"));
-export const CryptoLinkPage = lazy(() => preloadRoute("cryptoLink"));
 export const CryptoLinkSettingsPage = lazy(() =>
   preloadRoute("cryptoLinkSettings")
 );

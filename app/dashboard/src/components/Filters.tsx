@@ -44,20 +44,21 @@ type AdminItem = {
 
 export type FilterProps = {} & BoxProps;
 
-const setSearchField = debounce((search: string) => {
-  useDashboard.getState().onFilterChange({
-    ...useDashboard.getState().filters,
-    offset: 0,
-    search,
-  });
-}, 300);
-
 export const Filters: FC<FilterProps> = ({ ...props }) => {
   const { loading, filters, onFilterChange, refetchUsers } = useDashboard();
   const { t } = useTranslation();
   const { hasFeature } = useFeatures();
   const { userData, getUserIsSuccess } = useGetUser();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(filters.search ?? "");
+  const [applySearch] = useState(() =>
+    debounce((value: string) => {
+      useDashboard.getState().onFilterChange({
+        ...useDashboard.getState().filters,
+        offset: 0,
+        search: value,
+      });
+    }, 300)
+  );
   const [admins, setAdmins] = useState<AdminItem[]>([]);
   const [isScrollBlurActive, setIsScrollBlurActive] = useState(false);
 
@@ -72,6 +73,16 @@ export const Filters: FC<FilterProps> = ({ ...props }) => {
       window.removeEventListener("scroll", updateBlurState);
     };
   }, []);
+
+  useEffect(() => {
+    setSearch(filters.search ?? "");
+  }, [filters.search]);
+
+  useEffect(() => {
+    return () => {
+      applySearch.cancel();
+    };
+  }, [applySearch]);
 
   useEffect(() => {
     if (!getUserIsSuccess || !userData?.username) {
@@ -113,10 +124,11 @@ export const Filters: FC<FilterProps> = ({ ...props }) => {
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    setSearchField(e.target.value);
+    applySearch(e.target.value);
   };
 
   const clear = () => {
+    applySearch.cancel();
     setSearch("");
     onFilterChange({
       ...filters,

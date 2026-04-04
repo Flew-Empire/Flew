@@ -252,9 +252,9 @@ export function CryptoLinkModal({
   };
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || !isSettingsView) return;
     loadSettings();
-  }, [isActive]);
+  }, [isActive, isSettingsView]);
 
   const onResetHwid = async () => {
     try {

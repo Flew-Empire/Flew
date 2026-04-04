@@ -93,6 +93,20 @@ def _validate_subscription_payload(sub: Optional[dict], db: Session) -> UserResp
         # If expire is malformed, do not crash subscription endpoint.
         pass
 
+    # Block when traffic limit is already exhausted, even if async status
+    # normalization has not updated the user row to `limited` yet.
+    try:
+        if dbuser.data_limit is not None:
+            data_limit = int(dbuser.data_limit)
+            used_traffic = int(dbuser.used_traffic or 0)
+            if data_limit > 0 and used_traffic >= data_limit:
+                raise HTTPException(status_code=404, detail="Not Found")
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
+        # Ignore malformed values to avoid breaking unrelated subscriptions.
+        pass
+
     return dbuser
 
 

@@ -4,10 +4,9 @@ import { Footer } from "components/Footer";
 import { Header } from "components/Header";
 import { WorkspaceDialogs } from "components/WorkspaceDialogs";
 import { fetchInbounds } from "contexts/DashboardContext";
-import { AnimatePresence, motion } from "framer-motion";
 import { FC, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Outlet, useLocation, useNavigate, useNavigation, useOutlet } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, useNavigation } from "react-router-dom";
 
 const BackIcon = chakra(ArrowLeftIcon, {
   baseStyle: {
@@ -16,14 +15,11 @@ const BackIcon = chakra(ArrowLeftIcon, {
   },
 });
 
-const MotionBox = motion(Box);
-
 export const WorkspaceLayout: FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const navigation = useNavigation();
   const { t } = useTranslation();
-  const currentOutlet = useOutlet();
 
   useEffect(() => {
     fetchInbounds().catch((error) => {
@@ -32,7 +28,6 @@ export const WorkspaceLayout: FC = () => {
   }, []);
 
   const isHome = location.pathname === "/";
-  const isSubscriptionRoute = location.pathname.startsWith("/subscription/");
 
   return (
     <VStack
@@ -68,28 +63,9 @@ export const WorkspaceLayout: FC = () => {
           </HStack>
         )}
 
-        <AnimatePresence
-          mode={isSubscriptionRoute ? "sync" : "wait"}
-          initial={false}
-        >
-          <MotionBox
-            key={location.pathname}
-            className="workspace-route-shell"
-            initial={
-              isSubscriptionRoute ? { opacity: 0.96, y: 8 } : { opacity: 0, x: 22 }
-            }
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            exit={
-              isSubscriptionRoute ? { opacity: 0.98, y: -6 } : { opacity: 0, x: -18 }
-            }
-            transition={{
-              duration: isSubscriptionRoute ? 0.12 : 0.2,
-              ease: "easeOut",
-            }}
-          >
-            {currentOutlet}
-          </MotionBox>
-        </AnimatePresence>
+        <Box className="workspace-route-shell">
+          <Outlet />
+        </Box>
         <WorkspaceDialogs />
       </Box>
 

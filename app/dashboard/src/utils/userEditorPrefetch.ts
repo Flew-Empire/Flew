@@ -18,6 +18,11 @@ export const isUserEditorNotFoundError = (error: any) => {
   return status === 404;
 };
 
+export const isUserEditorUnavailableError = (error: any) => {
+  const status = error?.response?.status ?? error?.status ?? error?.statusCode;
+  return status === 403 || status === 404;
+};
+
 export const getPrefetchedUserEditor = (username: string) => {
   const key = getKey(username);
   const cached = userEditorCache.get(key);
@@ -46,7 +51,7 @@ export const prefetchUserEditor = (username: string) => {
   }
 
   const request = fetch<User>(`/user/${encodeURIComponent(username)}`, {
-    ...( { silent404: true } as any ),
+    ...({ silent404: true, silent403: true } as any),
   })
     .then((user) => {
       userEditorCache.set(key, {

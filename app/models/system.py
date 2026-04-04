@@ -7,7 +7,7 @@ class SystemStats(BaseModel):
     version: str
     edition: Optional[str] = None
     features: List[str] = []
-    xpanel_enabled: bool = True
+    xpanel_enabled: bool = False
     mem_total: int
     mem_used: int
     cpu_cores: int

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_DOMAIN="merkez.mediatmshow.online"
+DEFAULT_DOMAIN="panel.example.com"
 INSTALL_DIR="${FLEW_INSTALL_DIR:-/opt/flew}"
 SKIP_CAPTCHA="${FLEW_INSTALL_SKIP_CAPTCHA:-0}"
 FORCE_INSTALL="${FLEW_INSTALL_FORCE:-0}"
@@ -23,7 +23,7 @@ Usage:
 
 Examples:
   install_client.sh
-  install_client.sh --domain merkez.mediatmshow.online --otp 123456
+  install_client.sh --domain panel.example.com --otp 123456
 USAGE
 }
 

@@ -564,10 +564,7 @@ def get_device_settings_state_for_username(username: str) -> Dict[str, Any]:
     raw_limit = raw_entry.get("limit") if isinstance(raw_entry, dict) else None
     raw_unlimited = bool(raw_entry.get("unlimited", False)) if isinstance(raw_entry, dict) else False
     normalized_raw_limit = _safe_int(raw_limit, DEFAULT_ALLOWED_DEVICES) if raw_limit is not None else None
-    has_override = raw_unlimited or (
-        normalized_raw_limit is not None
-        and normalized_raw_limit != DEFAULT_ALLOWED_DEVICES
-    )
+    has_override = raw_unlimited or normalized_raw_limit is not None
     return {
         "limit": int(entry["limit"]),
         "unlimited": bool(entry["unlimited"]),

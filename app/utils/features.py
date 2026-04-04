@@ -7,6 +7,17 @@ from app.utils.edition_names import normalize_edition_name, valid_edition_names
 
 
 _FEATURES_BY_EDITION = {
+    "free": {
+        "admin_accounts",
+        "admin_manager",
+        "happ_crypto",
+        "subscription_settings",
+        "traffic_stats",
+        "online_stats",
+        "cpu_stats",
+        "admin_filter",
+        "captcha",
+    },
     "start": {
         "admin_accounts",
         "admin_limits",
@@ -57,7 +68,7 @@ def _edition_features(edition: str) -> Set[str]:
     normalized = normalize_edition_name(edition)
     if normalized in valid_edition_names():
         return set(_FEATURES_BY_EDITION[normalized])
-    return set(_FEATURES_BY_EDITION["x"])
+    return set(_FEATURES_BY_EDITION["free"])
 
 
 def enabled_features() -> Set[str]:

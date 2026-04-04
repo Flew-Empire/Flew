@@ -379,9 +379,9 @@ def _normalize_admin_cap(value: Optional[int], *, default: int, maximum: int) ->
     return max(1, min(parsed, maximum))
 
 
-def _get_unique_ip_cap_for_admin(db: Session, admin: Admin) -> int:
+def _get_unique_ip_cap_for_admin(db: Session, admin: Admin) -> Optional[int]:
     if _effective_admin_is_sudo(db, admin):
-        return 5
+        return None
 
     dbadmin = crud.get_admin(db, getattr(admin, "username", ""))
     return _normalize_admin_cap(
@@ -391,9 +391,9 @@ def _get_unique_ip_cap_for_admin(db: Session, admin: Admin) -> int:
     )
 
 
-def _get_device_limit_cap_for_admin(db: Session, admin: Admin) -> int:
+def _get_device_limit_cap_for_admin(db: Session, admin: Admin) -> Optional[int]:
     if _effective_admin_is_sudo(db, admin):
-        return int(MAX_ALLOWED_DEVICES_SUDO)
+        return None
 
     dbadmin = crud.get_admin(db, getattr(admin, "username", ""))
     return _normalize_admin_cap(
@@ -1747,12 +1747,13 @@ async def get_unique_ip_limit(
     max_limit = _get_unique_ip_cap_for_admin(db, admin)
     return {
         "username": username,
-        "limit": None if disabled or not has_override else int(state.get("limit") or DEFAULT_UNIQUE_IP_LIMIT),
+        "limit": None if disabled else int(state.get("limit") or DEFAULT_UNIQUE_IP_LIMIT),
         "disabled": bool(disabled),
         "has_override": has_override,
         "window_seconds": int(WINDOW_SECONDS_DEFAULT),
         "default_limit": int(DEFAULT_UNIQUE_IP_LIMIT),
-        "max_limit": int(max_limit),
+        "max_limit": int(max_limit) if max_limit is not None else None,
+        "allow_unlimited": bool(admin_is_sudo),
     }
 
 
@@ -1761,7 +1762,11 @@ async def get_unique_ip_limit_cap(
     admin: Admin = Depends(Admin.get_current),
     db: Session = Depends(get_db),
 ):
-    return {"max_limit": int(_get_unique_ip_cap_for_admin(db, admin))}
+    max_limit = _get_unique_ip_cap_for_admin(db, admin)
+    return {
+        "max_limit": int(max_limit) if max_limit is not None else None,
+        "allow_unlimited": bool(_effective_admin_is_sudo(db, admin)),
+    }
 
 
 @router.post("/ip-limit", dependencies=[Depends(_require_ip_limits)])
@@ -1795,7 +1800,7 @@ async def set_unique_ip_limit(
             raise HTTPException(status_code=400, detail="limit must be an integer")
         if limit <= 0:
             limit = None
-        elif limit > max_limit:
+        elif max_limit is not None and limit > max_limit:
             raise HTTPException(
                 status_code=400,
                 detail=f"limit must be <= {max_limit}",
@@ -1812,7 +1817,7 @@ async def set_unique_ip_limit(
             target_type="user",
             target_username=username,
             meta={
-                "limit": None if disabled or not state.get("has_override") else int(state.get("limit") or DEFAULT_UNIQUE_IP_LIMIT),
+                "limit": None if disabled else int(state.get("limit") or DEFAULT_UNIQUE_IP_LIMIT),
                 "disabled": bool(disabled),
             },
         )
@@ -1820,12 +1825,13 @@ async def set_unique_ip_limit(
         pass
     return {
         "username": username,
-        "limit": None if disabled or not state.get("has_override") else int(state.get("limit") or DEFAULT_UNIQUE_IP_LIMIT),
+        "limit": None if disabled else int(state.get("limit") or DEFAULT_UNIQUE_IP_LIMIT),
         "disabled": bool(disabled),
         "has_override": bool(state.get("has_override")),
         "window_seconds": int(WINDOW_SECONDS_DEFAULT),
         "default_limit": int(DEFAULT_UNIQUE_IP_LIMIT),
-        "max_limit": int(max_limit),
+        "max_limit": int(max_limit) if max_limit is not None else None,
+        "allow_unlimited": bool(admin_is_sudo),
     }
 
 
@@ -1834,8 +1840,9 @@ async def get_device_limit_cap(
     admin: Admin = Depends(Admin.get_current),
     db: Session = Depends(get_db),
 ):
+    max_limit = _get_device_limit_cap_for_admin(db, admin)
     return {
-        "max_limit": int(_get_device_limit_cap_for_admin(db, admin)),
+        "max_limit": int(max_limit) if max_limit is not None else None,
         "allow_unlimited": bool(_effective_admin_is_sudo(db, admin)),
     }
 
@@ -1863,15 +1870,11 @@ async def get_device_limit(
     max_limit = _get_device_limit_cap_for_admin(db, admin)
     return {
         "username": username,
-        "limit": (
-            int(settings.get("limit") or DEFAULT_ALLOWED_DEVICES)
-            if settings.get("has_override")
-            else None
-        ),
+        "limit": int(settings.get("limit") or DEFAULT_ALLOWED_DEVICES),
         "unlimited": bool(settings.get("unlimited")),
         "has_override": bool(settings.get("has_override")),
         "default_limit": int(DEFAULT_ALLOWED_DEVICES),
-        "max_limit": int(max_limit),
+        "max_limit": int(max_limit) if max_limit is not None else None,
         "allow_unlimited": bool(admin_is_sudo),
     }
 
@@ -1908,7 +1911,7 @@ async def set_device_limit(
                 raise HTTPException(status_code=400, detail="limit must be an integer")
             if limit < 1:
                 raise HTTPException(status_code=400, detail="limit must be >= 1")
-            if limit > max_limit:
+            if max_limit is not None and limit > max_limit:
                 raise HTTPException(
                     status_code=400,
                     detail=f"limit must be <= {max_limit}",
@@ -1926,7 +1929,7 @@ async def set_device_limit(
                 raise HTTPException(status_code=400, detail="limit must be an integer")
             if limit is not None and limit < 1:
                 raise HTTPException(status_code=400, detail="limit must be >= 1")
-            if limit is not None and limit > max_limit:
+            if limit is not None and max_limit is not None and limit > max_limit:
                 raise HTTPException(
                     status_code=400,
                     detail=f"limit must be <= {max_limit}",
@@ -1941,9 +1944,7 @@ async def set_device_limit(
             target_type="user",
             target_username=username,
             meta={
-                "limit": int(saved.get("limit") or DEFAULT_ALLOWED_DEVICES)
-                if saved.get("has_override")
-                else None,
+                "limit": int(saved.get("limit") or DEFAULT_ALLOWED_DEVICES),
                 "unlimited": bool(saved.get("unlimited")),
             },
         )
@@ -1952,13 +1953,11 @@ async def set_device_limit(
 
     return {
         "username": username,
-        "limit": int(saved.get("limit") or DEFAULT_ALLOWED_DEVICES)
-        if saved.get("has_override")
-        else None,
+        "limit": int(saved.get("limit") or DEFAULT_ALLOWED_DEVICES),
         "unlimited": bool(saved.get("unlimited")),
         "has_override": bool(saved.get("has_override")),
         "default_limit": int(DEFAULT_ALLOWED_DEVICES),
-        "max_limit": int(max_limit),
+        "max_limit": int(max_limit) if max_limit is not None else None,
         "allow_unlimited": bool(admin_is_sudo),
     }
 

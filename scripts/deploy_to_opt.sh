@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SRC="/root/Flew-Panel-VPS"
+SRC="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 DST="/opt/flew"
 
 if [ ! -d "$DST" ]; then

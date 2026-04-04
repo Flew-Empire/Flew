@@ -95,7 +95,7 @@
     "chatPermissionsSaveError": "Не удалось сохранить разрешения чата"
   },
   "adminChat.title": "Чат админов",
-  "adminChat.subtitle": "Личные сообщения между администраторами панели, где moor является главным контактом.",
+  "adminChat.subtitle": "Личные сообщения между администраторами панели, где главным контактом является основной админ.",
   "adminChat.contacts": "Контакты",
   "adminChat.noContacts": "Сейчас нет админов, доступных для переписки.",
   "adminChat.noMessages": "Сообщений пока нет",
@@ -110,7 +110,7 @@
   "adminChat.statusRead": "Прочитано",
   "adminChat.unreadBadge": "Непрочитано: {{count}}",
   "adminBilling.title": "Админ Биллинг",
-  "adminBilling.managerSubtitle": "Задавай цену за биллинговое действие каждому админу и закрывай их счета как moor.",
+  "adminBilling.managerSubtitle": "Задавай цену за биллинговое действие каждому админу и закрывай их счета как биллинг-менеджер.",
   "adminBilling.adminSubtitle": "Твой текущий чек и история списаний за действия по пользователям.",
   "adminBilling.currentDueBadge": "Текущий счет: {{amount}}",
   "adminBilling.refresh": "Обновить",

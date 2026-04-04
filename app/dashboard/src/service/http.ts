@@ -18,6 +18,7 @@ export const fetcher = <T = any>(
   ops: FetchOptions<"json"> = {}
 ) => {
   const silent404 = Boolean((ops as any)?.silent404);
+  const silent403 = Boolean((ops as any)?.silent403);
   const token = getAuthToken();
   if (token) {
     ops["headers"] = {
@@ -32,7 +33,7 @@ export const fetcher = <T = any>(
     })
     .catch((err) => {
       const status = err?.response?.status ?? err?.status ?? err?.statusCode;
-      if (!(silent404 && status === 404)) {
+      if (!((silent404 && status === 404) || (silent403 && status === 403))) {
         console.error("[API ERR]", method, url, err);
       }
       throw err;

@@ -1,15 +1,3 @@
 {
-  "admins": {
-    "berdi": {
-      "user_traffic_limit": 107374182400
-    },
-    "online": {
-      "user_traffic_limit": 107374182400
-    },
-    "dudy": {},
-    "m077": {
-      "user_traffic_limit": 107374182400
-    },
-    "ali": {}
-  }
+  "admins": {}
 }

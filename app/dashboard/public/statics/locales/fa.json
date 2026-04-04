@@ -39,7 +39,7 @@
     "chatPermissionsSaveError": "ذخیره مجوزهای چت ناموفق بود"
   },
   "adminChat.title": "چت ادمین‌ها",
-  "adminChat.subtitle": "پیام خصوصی بین ادمین‌های پنل با moor به عنوان مخاطب اصلی.",
+  "adminChat.subtitle": "پیام خصوصی بین ادمین‌های پنل با ادمین اصلی به عنوان مخاطب اصلی.",
   "adminChat.contacts": "مخاطبان",
   "adminChat.noContacts": "فعلاً ادمینی برای گفتگو در دسترس نیست.",
   "adminChat.noMessages": "هنوز پیامی نیست",
@@ -54,7 +54,7 @@
   "adminChat.statusRead": "خوانده شد",
   "adminChat.unreadBadge": "خوانده‌نشده: {{count}}",
   "adminBilling.title": "صورتحساب ادمین",
-  "adminBilling.managerSubtitle": "برای هر ادمین قیمت هر عملیات را تعیین کنید و به عنوان moor صورتحساب را ببندید.",
+  "adminBilling.managerSubtitle": "برای هر ادمین قیمت هر عملیات را تعیین کنید و به عنوان مدیر صورتحساب، فاکتور را ببندید.",
   "adminBilling.adminSubtitle": "رسید فعلی و تاریخچه صورتحساب شما برای عملیات کاربران.",
   "adminBilling.currentDueBadge": "بدهی فعلی: {{amount}}",
   "adminBilling.refresh": "بروزرسانی",

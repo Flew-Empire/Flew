@@ -150,7 +150,7 @@ DISABLE_RECORDING_NODE_USAGE = config("DISABLE_RECORDING_NODE_USAGE", cast=bool,
 
 # headers: profile-update-interval, support-url, profile-title
 SUB_UPDATE_INTERVAL = config("SUB_UPDATE_INTERVAL", default="12")
-SUB_SUPPORT_URL = config("SUB_SUPPORT_URL", default="https://t.me/")
+SUB_SUPPORT_URL = config("SUB_SUPPORT_URL", default="")
 SUB_PROFILE_TITLE = config("SUB_PROFILE_TITLE", default="Flew")
 
 # discord webhook log
@@ -167,8 +167,12 @@ JOB_SEND_NOTIFICATIONS_INTERVAL = config("JOB_SEND_NOTIFICATIONS_INTERVAL", cast
 # ============================================
 # FLEW PANEL - Subscription Aggregation
 # ============================================
-FLEW_DOMAIN = config("FLEW_DOMAIN", default="home.turkmendili.ru")
-FLEW_TARGET_CHECK_IPS = config("FLEW_TARGET_CHECK_IPS", default="93.171.220.198,185.69.186.175").split(",")
+FLEW_DOMAIN = config("FLEW_DOMAIN", default="")
+FLEW_TARGET_CHECK_IPS = [
+    ip.strip()
+    for ip in config("FLEW_TARGET_CHECK_IPS", default="", cast=str).split(",")
+    if ip.strip()
+]
 FLEW_MAX_PING_MS = config("FLEW_MAX_PING_MS", cast=int, default=300)
 FLEW_UPDATE_INTERVAL_HOURS = config("FLEW_UPDATE_INTERVAL_HOURS", cast=int, default=1)
 FLEW_REDIS_URL = config("FLEW_REDIS_URL", default="")

@@ -95,7 +95,7 @@
     "chatPermissionsSaveError": "Failed to save chat permissions"
   },
   "adminChat.title": "Admin Chat",
-  "adminChat.subtitle": "Direct messages between panel administrators with moor as the main contact.",
+  "adminChat.subtitle": "Direct messages between panel administrators with the main admin as the primary contact.",
   "adminChat.contacts": "Contacts",
   "adminChat.noContacts": "No admins are available for chat right now.",
   "adminChat.noMessages": "No messages yet",
@@ -110,7 +110,7 @@
   "adminChat.statusRead": "Read",
   "adminChat.unreadBadge": "Unread: {{count}}",
   "adminBilling.title": "Admin Billing",
-  "adminBilling.managerSubtitle": "Set a billing price per action for every admin and close their invoices as moor.",
+  "adminBilling.managerSubtitle": "Set a billing price per action for every admin and close their invoices as the billing manager.",
   "adminBilling.adminSubtitle": "Your current receipt and billing history for user-related actions.",
   "adminBilling.currentDueBadge": "Current due: {{amount}}",
   "adminBilling.refresh": "Refresh",

@@ -745,9 +745,8 @@ export const Flew: FC = () => {
         </Card>
       </Box>
 
-      {/* Installation OTPs — only for primary sudo */}
-      {getUserIsSuccess &&
-        userData.username?.toLowerCase() === "moor" && <InstallOtpManager />}
+      {/* Installation OTPs — available only for sudo admins */}
+      {getUserIsSuccess && userData?.is_sudo && <InstallOtpManager />}
 
       <Footer />
 
@@ -830,7 +829,7 @@ export const Flew: FC = () => {
                 value={targetIpsInput}
                 onChange={(e) => setTargetIpsInput(e.target.value)}
                 rows={6}
-                placeholder="93.171.220.198, 185.69.186.175"
+                placeholder="1.1.1.1, 8.8.8.8"
               />
             </FormControl>
           </ModalBody>
