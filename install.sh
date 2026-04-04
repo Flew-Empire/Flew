@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 INSTALL_DIR="/opt/flew"
 PANEL_DOMAIN=""
 PUBLIC_IP=""
 ADMIN_USER="admin"
 ADMIN_PASSWORD=""
 ADMIN_EMAIL=""
-SKIP_EMAIL=false
 SKIP_NGINX=false
 
 usage() {
@@ -18,34 +17,25 @@ Flew Free Installer v$VERSION
 Usage: $0 [OPTIONS]
 
 OPTIONS:
-  --domain DOMAIN          Panel domain (e.g., panel.example.com)
-  --public-ip IP          Public server IP (for --skip-nginx mode)
-  --admin ADMIN           Admin username (default: admin)
-  --password PASSWORD     Admin password
-  --email EMAIL           Admin email (for Let's Encrypt)
-  --install-dir PATH      Install directory (default: /opt/flew)
-  --skip-email            Skip email for Let's Encrypt
-  --skip-nginx            Install without nginx (HTTP only, no HTTPS)
-  -h, --help              Show this help
-
-EXAMPLES:
-  # With domain and email
-  $0 --domain panel.example.com --admin admin --password 'mysecurepass' --email admin@example.com
-
-  # Without domain (HTTP only, no nginx) - specify public IP
-  $0 --admin admin --password 'mysecurepass' --public-ip 92.242.63.93 --skip-nginx
+  --domain DOMAIN          Panel domain (e.g. panel.example.com)
+  --public-ip IP           Public IP for HTTP-only installs
+  --admin ADMIN            First admin username (default: admin)
+  --password PASSWORD      First admin password
+  --email EMAIL            Email for Let's Encrypt (optional)
+  --install-dir PATH       Install directory (default: /opt/flew)
+  --skip-nginx             Run without nginx/HTTPS on port 8000
+  -h, --help               Show this help
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
-    case $1 in
-        --domain) PANEL_DOMAIN="$2"; shift 2 ;;
-        --public-ip) PUBLIC_IP="$2"; shift 2 ;;
-        --admin) ADMIN_USER="$2"; shift 2 ;;
-        --password) ADMIN_PASSWORD="$2"; shift 2 ;;
-        --email) ADMIN_EMAIL="$2"; shift 2 ;;
-        --install-dir) INSTALL_DIR="$2"; shift 2 ;;
-        --skip-email) SKIP_EMAIL=true; shift ;;
+    case "$1" in
+        --domain) PANEL_DOMAIN="${2:-}"; shift 2 ;;
+        --public-ip) PUBLIC_IP="${2:-}"; shift 2 ;;
+        --admin) ADMIN_USER="${2:-}"; shift 2 ;;
+        --password) ADMIN_PASSWORD="${2:-}"; shift 2 ;;
+        --email) ADMIN_EMAIL="${2:-}"; shift 2 ;;
+        --install-dir) INSTALL_DIR="${2:-}"; shift 2 ;;
         --skip-nginx) SKIP_NGINX=true; shift ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1"; usage; exit 1 ;;
@@ -62,13 +52,17 @@ if [ -z "$PANEL_DOMAIN" ]; then
 fi
 
 install_packages() {
-    if command -v apt-get &> /dev/null; then
+    if command -v apt-get >/dev/null 2>&1; then
         DEBIAN_FRONTEND=noninteractive apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y curl wget git python3-venv python3-pip certbot nginx
-    elif command -v dnf &> /dev/null; then
-        dnf install -y curl wget git python3-venv python3-pip certbot nginx
-    elif command -v yum &> /dev/null; then
-        yum install -y curl wget git python3-venv python3-pip certbot nginx
+        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            ca-certificates curl git nginx certbot python3 python3-pip python3-venv
+    elif command -v dnf >/dev/null 2>&1; then
+        dnf install -y ca-certificates curl git nginx certbot python3 python3-pip
+    elif command -v yum >/dev/null 2>&1; then
+        yum install -y ca-certificates curl git nginx certbot python3 python3-pip
+    else
+        echo "Unsupported package manager."
+        exit 1
     fi
 }
 
@@ -85,112 +79,90 @@ clone_repo() {
 setup_venv() {
     cd "$INSTALL_DIR"
     python3 -m venv venv
-    source venv/bin/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
+    "$INSTALL_DIR/venv/bin/pip" install --upgrade pip
+    "$INSTALL_DIR/venv/bin/pip" install -r requirements.txt
 }
 
-create_env() {
+write_env() {
     cd "$INSTALL_DIR"
-    if [ -f .env.example ]; then
-        cp .env.example .env
-    fi
-    
-    if [ -n "$PANEL_DOMAIN" ]; then
-        sed -i "s|UVICORN_HOST=.*|UVICORN_HOST=0.0.0.0|" .env
-        sed -i "s|UVICORN_PORT=.*|UVICORN_PORT=443|" .env
-        sed -i "s|UVICORN_SSL_CERTFILE=.*|UVICORN_SSL_CERTFILE=/etc/letsencrypt/live/$PANEL_DOMAIN/fullchain.pem|" .env
-        sed -i "s|UVICORN_SSL_KEYFILE=.*|UVICORN_SSL_KEYFILE=/etc/letsencrypt/live/$PANEL_DOMAIN/privkey.pem|" .env
-        sed -i "s|FLEW_DOMAIN=.*|FLEW_DOMAIN=$PANEL_DOMAIN|" .env
-        sed -i "s|XRAY_SUBSCRIPTION_URL_PREFIX=.*|XRAY_SUBSCRIPTION_URL_PREFIX=https://$PANEL_DOMAIN|" .env
+
+    local base_url=""
+    local uvicorn_host="0.0.0.0"
+    local uvicorn_port="8000"
+
+    if [ -n "$PANEL_DOMAIN" ] && [ "$SKIP_NGINX" = false ]; then
+        base_url="https://${PANEL_DOMAIN}"
+        uvicorn_host="127.0.0.1"
     else
-        sed -i "s|UVICORN_HOST=.*|UVICORN_HOST=0.0.0.0|" .env
-        sed -i "s|UVICORN_PORT=.*|UVICORN_PORT=8000|" .env
-        sed -i "s|UVICORN_SSL_CERTFILE=.*|UVICORN_SSL_CERTFILE=|" .env
-        sed -i "s|UVICORN_SSL_KEYFILE=.*|UVICORN_SSL_KEYFILE=|" .env
-        sed -i "s|FLEW_TARGET_CHECK_IPS=.*|FLEW_TARGET_CHECK_IPS=|" .env
-        
-        if [ -n "$PUBLIC_IP" ]; then
-            sed -i "s|FLEW_DOMAIN=.*|FLEW_DOMAIN=http://$PUBLIC_IP:8000|" .env
-            sed -i "s|XRAY_SUBSCRIPTION_URL_PREFIX=.*|XRAY_SUBSCRIPTION_URL_PREFIX=http://$PUBLIC_IP:8000|" .env
+        if [ -z "$PUBLIC_IP" ]; then
+            PUBLIC_IP="$(hostname -I | awk '{print $1}')"
         fi
+        base_url="http://${PUBLIC_IP}:8000"
     fi
-    
-    SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
-    sed -i "s|SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" .env
-    
-    sed -i "s|FIRST_ADMIN_USERNAME=.*|FIRST_ADMIN_USERNAME=$ADMIN_USER|" .env
-    sed -i "s|FIRST_ADMIN_PASSWORD=.*|FIRST_ADMIN_PASSWORD=$ADMIN_PASSWORD|" .env
-    
-    if [ -n "$ADMIN_EMAIL" ]; then
-        sed -i "s|FIRST_ADMIN_EMAIL=.*|FIRST_ADMIN_EMAIL=$ADMIN_EMAIL|" .env
-    fi
+
+    cat > .env <<EOF
+UVICORN_HOST="${uvicorn_host}"
+UVICORN_PORT=${uvicorn_port}
+ALLOWED_ORIGINS="*"
+
+SUDO_USERNAME=""
+SUDO_PASSWORD=""
+
+XRAY_JSON="xray_config.json"
+XRAY_RUNTIME_JSON="/usr/local/etc/xray/config.json"
+XRAY_SUBSCRIPTION_URL_PREFIX="${base_url}"
+XRAY_SUBSCRIPTION_PATH="sub"
+
+FLEW_EDITION="free"
+FLEW_FEATURES=""
+XPANEL_ENABLED=False
+
+FLEW_DOMAIN="${base_url}"
+FLEW_TARGET_CHECK_IPS=""
+
+SUB_PROFILE_TITLE="Flew"
+SUB_SUPPORT_URL=""
+SUB_UPDATE_INTERVAL=12
+
+LOGIN_CAPTCHA_ENABLED=False
+EOF
+}
+
+run_migrations() {
+    cd "$INSTALL_DIR"
+    "$INSTALL_DIR/venv/bin/python" -m alembic upgrade head
+}
+
+create_first_admin() {
+    cd "$INSTALL_DIR"
+    FLEW_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+        "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/flew-cli.py" admin create \
+        --username "$ADMIN_USER" \
+        --sudo \
+        --telegram-id 0 \
+        --discord-webhook 0
 }
 
 setup_service() {
-    cat > /etc/systemd/system/flew.service << EOF
-[Unit]
-Description=Flew Panel
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/main.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    systemctl daemon-reload
-    systemctl enable flew
-    systemctl start flew
+    cd "$INSTALL_DIR"
+    chmod +x install_service.sh build_dashboard.sh scripts/*.sh flew || true
+    /bin/bash "$INSTALL_DIR/install_service.sh"
+    systemctl enable --now flew
 }
 
-setup_nginx() {
-    if [ "$SKIP_NGINX" = true ]; then
+setup_https() {
+    if [ "$SKIP_NGINX" = true ] || [ -z "$PANEL_DOMAIN" ]; then
         return
     fi
 
-    if [ -n "$PANEL_DOMAIN" ]; then
-        certbot certonly --nginx -d "$PANEL_DOMAIN" --non-interactive --agree-tos --email "${ADMIN_EMAIL:-admin@example.com}" || true
+    if [ -n "$ADMIN_EMAIL" ]; then
+        /bin/bash "$INSTALL_DIR/scripts/setup_https_dashboard_domain.sh" \
+            --domain "$PANEL_DOMAIN" \
+            --email "$ADMIN_EMAIL"
+    else
+        /bin/bash "$INSTALL_DIR/scripts/setup_https_dashboard_domain.sh" \
+            --domain "$PANEL_DOMAIN"
     fi
-
-    cat > /etc/nginx/sites-available/flew << EOF
-server {
-    listen 80;
-    server_name $PANEL_DOMAIN;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-
-server {
-    listen 443 ssl http2;
-    server_name $PANEL_DOMAIN;
-
-    ssl_certificate /etc/letsencrypt/live/$PANEL_DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$PANEL_DOMAIN/privkey.pem;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOF
-
-    ln -sf /etc/nginx/sites-available/flew /etc/nginx/sites-enabled/
-    nginx -t && systemctl reload nginx
 }
 
 echo "Installing Flew Free..."
@@ -198,23 +170,17 @@ install_packages
 install_xray
 clone_repo
 setup_venv
-create_env
+write_env
+run_migrations
+create_first_admin
 setup_service
-
-if [ "$SKIP_NGINX" = false ]; then
-    setup_nginx
-fi
+setup_https
 
 echo ""
 echo "Installation complete!"
-if [ -n "$PANEL_DOMAIN" ]; then
+if [ -n "$PANEL_DOMAIN" ] && [ "$SKIP_NGINX" = false ]; then
     echo "Open: https://$PANEL_DOMAIN/dashboard/"
-elif [ -n "$PUBLIC_IP" ]; then
-    echo "Open: http://$PUBLIC_IP:8000/dashboard/"
 else
-    DETECTED_IP=$(hostname -I | awk '{print $1}')
-    echo "Open: http://${DETECTED_IP}:8000/dashboard/"
-    echo "Note: If $DETECTED_IP is not your public IP, use --public-ip YOUR_PUBLIC_IP"
+    echo "Open: http://${PUBLIC_IP}:8000/dashboard/"
 fi
 echo "Admin user: $ADMIN_USER"
-echo "Password: $ADMIN_PASSWORD"

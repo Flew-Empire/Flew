@@ -1,14 +1,12 @@
 from fastapi import APIRouter
 from . import (
-    admin, 
-    admin_billing,
-    admin_chat,
-    core, 
-    node, 
+    admin,
+    core,
+    node,
     install,
-    subscription, 
-    system, 
-    user_template, 
+    subscription,
+    system,
+    user_template,
     user,
     home,
 )
@@ -17,8 +15,6 @@ api_router = APIRouter()
 
 routers = [
     admin.router,
-    admin_billing.router,
-    admin_chat.router,
     core.router,
     node.router,
     install.router,

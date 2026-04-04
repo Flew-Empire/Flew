@@ -119,8 +119,8 @@ type UserDeviceItem = {
 };
 
 type UserDialogCapabilityCache = {
-  ipLimitMax: number;
-  deviceLimitMax: number;
+  ipLimitMax: number | null;
+  deviceLimitMax: number | null;
   deviceAllowUnlimited: boolean;
   expiresAt: number;
 };
@@ -344,8 +344,8 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
   const { colorMode } = useColorMode();
 
   const [usageVisible, setUsageVisible] = useState(false);
-  const [ipLimitMax, setIpLimitMax] = useState<number>(3);
-  const [deviceLimitMax, setDeviceLimitMax] = useState<number>(1);
+  const [ipLimitMax, setIpLimitMax] = useState<number | null>(3);
+  const [deviceLimitMax, setDeviceLimitMax] = useState<number | null>(1);
   const [deviceAllowUnlimited, setDeviceAllowUnlimited] = useState<boolean>(false);
   const [canEditDeviceLimit, setCanEditDeviceLimit] = useState<boolean>(false);
   const [devices, setDevices] = useState<UserDeviceItem[]>([]);
@@ -504,7 +504,9 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
     }
 
     if (canUseDeviceLimit) {
-      setDeviceLimitMax(Math.max(1, nextDeviceLimitMax));
+      setDeviceLimitMax(
+        nextDeviceLimitMax === null ? null : Math.max(1, nextDeviceLimitMax)
+      );
       setDeviceAllowUnlimited(nextDeviceAllowUnlimited);
       setCanEditDeviceLimit(true);
     } else {
@@ -550,8 +552,14 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
         const deviceCapResp: any =
           results[1].status === "fulfilled" ? (results[1] as PromiseFulfilledResult<any>).value : null;
         const resolvedCapabilities = setUserDialogCapabilityCache({
-          ipLimitMax: Math.max(1, Number(ipCapResp?.max_limit || 3)),
-          deviceLimitMax: Math.max(1, Number(deviceCapResp?.max_limit || 1)),
+          ipLimitMax:
+            ipCapResp?.allow_unlimited || ipCapResp?.max_limit == null
+              ? null
+              : Math.max(1, Number(ipCapResp.max_limit || 3)),
+          deviceLimitMax:
+            deviceCapResp?.allow_unlimited || deviceCapResp?.max_limit == null
+              ? null
+              : Math.max(1, Number(deviceCapResp.max_limit || 1)),
           deviceAllowUnlimited: !!deviceCapResp?.allow_unlimited,
         });
 
@@ -582,15 +590,20 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
     if (canUseIpLimit) {
       fetch(`/flew/ip-limit/${encodeURIComponent(editingUser.username)}`)
         .then((resp: any) => {
-          const maxLimit = Number(resp?.max_limit || 3);
+          const maxLimit =
+            resp?.allow_unlimited || resp?.max_limit == null
+              ? null
+              : Math.max(1, Number(resp.max_limit || 3));
           const disabled = !!resp?.disabled;
-          const hasOverride = !!resp?.has_override;
           const limit = Number(resp?.limit ?? 0);
           setIpLimitMax(maxLimit);
-          if (disabled || !hasOverride || !Number.isFinite(limit) || limit <= 0) {
+          if (disabled || !Number.isFinite(limit) || limit <= 0) {
             form.setValue("unique_ip_limit", "");
           } else {
-            const safeLimit = Math.min(Math.max(1, limit), maxLimit);
+            const safeLimit =
+              maxLimit === null
+                ? Math.max(1, limit)
+                : Math.min(Math.max(1, limit), maxLimit);
             form.setValue("unique_ip_limit", String(safeLimit));
           }
         })
@@ -606,21 +619,25 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
     if (canUseDeviceLimit) {
       fetch(`/flew/device-limit/${encodeURIComponent(editingUser.username)}`)
         .then((resp: any) => {
-          const maxLimit = Number(resp?.max_limit || 1);
-          const safeMax = Math.max(1, maxLimit);
+          const maxLimit =
+            resp?.allow_unlimited || resp?.max_limit == null
+              ? null
+              : Math.max(1, Number(resp.max_limit || 1));
           const allowUnlimited = !!resp?.allow_unlimited;
           const unlimited = !!resp?.unlimited;
-          const hasOverride = !!resp?.has_override;
           const limit = Number(resp?.limit ?? 0);
 
-          setDeviceLimitMax(safeMax);
+          setDeviceLimitMax(maxLimit);
           setDeviceAllowUnlimited(allowUnlimited);
           if (allowUnlimited && unlimited) {
             form.setValue("device_limit", "");
-          } else if (!hasOverride || !Number.isFinite(limit) || limit <= 0) {
+          } else if (!Number.isFinite(limit) || limit <= 0) {
             form.setValue("device_limit", "");
           } else {
-            const safeLimit = Math.min(Math.max(1, limit), safeMax);
+            const safeLimit =
+              maxLimit === null
+                ? Math.max(1, limit)
+                : Math.min(Math.max(1, limit), maxLimit);
             form.setValue("device_limit", String(safeLimit));
           }
         })
@@ -693,7 +710,6 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
     const methods = { edited: editUser, created: createUser };
     const method = isEditing ? "edited" : "created";
     setError(null);
-    const dirtyFields = form.formState.dirtyFields;
 
     const {
       selected_proxies,
@@ -722,7 +738,7 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
 
     methods[method](body)
       .then(async () => {
-        if (canUseIpLimit && dirtyFields.unique_ip_limit) {
+        if (canUseIpLimit) {
           const limitRaw = String(
             form.getValues("unique_ip_limit") ?? unique_ip_limit ?? ""
           ).trim();
@@ -730,14 +746,32 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
           if (limitRaw.length) {
             const parsed = Number(limitRaw);
             const normalized = Number.isFinite(parsed) ? Math.trunc(parsed) : 1;
-            const maxLimit = Math.max(1, Number(ipLimitMax || 3));
-            limitNum = Math.min(Math.max(1, normalized || 1), maxLimit);
+            const safeLimit = Math.max(1, normalized || 1);
+            limitNum =
+              ipLimitMax === null
+                ? safeLimit
+                : Math.min(safeLimit, Math.max(1, ipLimitMax));
           }
           try {
-            await fetch("/flew/ip-limit", {
+            const saved: any = await fetch("/flew/ip-limit", {
               method: "POST",
               body: { username: values.username, limit: limitNum },
             });
+            const savedMax =
+              saved?.allow_unlimited || saved?.max_limit == null
+                ? null
+                : Math.max(1, Number(saved.max_limit || ipLimitMax || 3));
+            const savedDisabled = !!saved?.disabled;
+            const savedLimit = Math.max(
+              1,
+              Number(saved?.limit || limitNum || saved?.default_limit || 1)
+            );
+            setIpLimitMax(savedMax);
+            if (savedDisabled) {
+              form.setValue("unique_ip_limit", "");
+            } else {
+              form.setValue("unique_ip_limit", String(savedLimit));
+            }
           } catch (e) {
             // Do not fail user save if this extra setting fails.
             toast({
@@ -750,16 +784,19 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
           }
         }
 
-        if (canUseDeviceLimit && canEditDeviceLimit && dirtyFields.device_limit) {
+        if (canUseDeviceLimit && canEditDeviceLimit) {
           try {
             const limitRaw = String(form.getValues("device_limit") ?? device_limit ?? "").trim();
             const unlimited = deviceAllowUnlimited && limitRaw.length === 0;
             let parsedLimit: number | null = null;
             if (limitRaw.length && !unlimited) {
-              const maxLimit = Math.max(1, Number(deviceLimitMax || 1));
               const parsed = Number(limitRaw);
               const normalized = Number.isFinite(parsed) ? Math.trunc(parsed) : 1;
-              parsedLimit = Math.min(Math.max(1, normalized || 1), maxLimit);
+              const safeLimit = Math.max(1, normalized || 1);
+              parsedLimit =
+                deviceLimitMax === null
+                  ? safeLimit
+                  : Math.min(safeLimit, Math.max(1, deviceLimitMax));
             }
 
             const saved: any = await fetch("/flew/device-limit", {
@@ -770,13 +807,18 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
             // Keep UI in sync with server response immediately after save.
             const savedAllowUnlimited = !!saved?.allow_unlimited;
             const savedUnlimited = !!saved?.unlimited;
-            const savedMax = Math.max(1, Number(saved?.max_limit || deviceLimitMax || 1));
-            const savedHasOverride = !!saved?.has_override;
-            const savedLimit = Math.max(1, Number(saved?.limit || parsedLimit || 1));
+            const savedMax =
+              savedAllowUnlimited || saved?.max_limit == null
+                ? null
+                : Math.max(1, Number(saved.max_limit || deviceLimitMax || 1));
+            const savedLimit = Math.max(
+              1,
+              Number(saved?.limit || parsedLimit || saved?.default_limit || 1)
+            );
 
             setDeviceLimitMax(savedMax);
             setDeviceAllowUnlimited(savedAllowUnlimited);
-            if ((savedAllowUnlimited && savedUnlimited) || !savedHasOverride) {
+            if (savedAllowUnlimited && savedUnlimited) {
               form.setValue("device_limit", "");
             } else {
               form.setValue("device_limit", String(savedLimit));
@@ -1278,7 +1320,7 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
                             size="sm"
                             type="number"
                             min={1}
-                            max={ipLimitMax}
+                            max={ipLimitMax ?? undefined}
                             step={1}
                             {...form.register("unique_ip_limit")}
                           />
@@ -1294,7 +1336,7 @@ export const UserDialog: FC<UserDialogProps> = ({ mode = "modal" }) => {
                             size="sm"
                             type="number"
                             min={1}
-                            max={deviceLimitMax}
+                            max={deviceLimitMax ?? undefined}
                             step={1}
                             {...form.register("device_limit")}
                           />

@@ -41,7 +41,7 @@ interface InstallOtp {
   note?: string | null;
 }
 
-const DEFAULT_INSTALL_DOMAIN = "merkez.mediatmshow.online";
+const DEFAULT_INSTALL_DOMAIN = "panel.example.com";
 const normalizeEdition = (value?: string | null) => {
   const normalized = String(value || "").trim().toLowerCase();
   if (!normalized) return "start";

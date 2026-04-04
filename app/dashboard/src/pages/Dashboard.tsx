@@ -11,22 +11,16 @@ import useGetUser from "hooks/useGetUser";
 import { useTranslation } from "react-i18next";
 import {
   AdjustmentsHorizontalIcon,
-  BanknotesIcon,
-  ShieldCheckIcon,
   UserGroupIcon,
   UserPlusIcon,
-  LockClosedIcon,
   ChartBarIcon,
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { chakra } from "@chakra-ui/react";
 
 const iconProps = { baseStyle: { w: "18px", h: "18px" } };
-const AdminLimitsIcon = chakra(ShieldCheckIcon, iconProps);
 const AdminAccountsIcon = chakra(UserPlusIcon, iconProps);
 const AdminManagerIcon = chakra(UserGroupIcon, iconProps);
-const AdminBillingIcon = chakra(BanknotesIcon, iconProps);
-const CryptoLinkIcon = chakra(LockClosedIcon, iconProps);
 const CryptoSettingsIcon = chakra(AdjustmentsHorizontalIcon, iconProps);
 const NodesUsageIcon = chakra(ChartBarIcon, iconProps);
 const ResetUsageIcon = chakra(ArrowPathIcon, iconProps);
@@ -200,27 +194,6 @@ export const Dashboard: FC = () => {
                     </PrefetchLink>
                   )}
 
-                  {isSudo() && hasFeature("admin_limits") && (
-                    <PrefetchLink
-                      to="/admin-limits/"
-                      preload="adminLimits"
-                      style={{ display: "block", width: "100%" }}
-                    >
-                      <Button
-                        size="sm"
-                        h="52px"
-                        w="full"
-                        px={4}
-                        textAlign="left"
-                        justifyContent="flex-start"
-                        leftIcon={<AdminLimitsIcon />}
-                        className="sidebar-btn"
-                      >
-                        {t("sidebar.adminLimits")}
-                      </Button>
-                    </PrefetchLink>
-                  )}
-
                   {isSudo() && hasFeature("admin_manager") && (
                     <PrefetchLink
                       to="/admin-manager/"
@@ -241,49 +214,7 @@ export const Dashboard: FC = () => {
                       </Button>
                     </PrefetchLink>
                   )}
-
-                  {hasFeature("admin_billing") && (
-                    <PrefetchLink
-                      to="/admin-billing/"
-                      preload="adminBilling"
-                      style={{ display: "block", width: "100%" }}
-                    >
-                      <Button
-                        size="sm"
-                        h="52px"
-                        px={4}
-                        w="full"
-                        textAlign="left"
-                        justifyContent="flex-start"
-                        leftIcon={<AdminBillingIcon />}
-                        className="sidebar-btn"
-                      >
-                        {t("sidebar.adminBilling")}
-                      </Button>
-                    </PrefetchLink>
-                  )}
               </>
-
-              {hasFeature("happ_crypto") && (
-                <PrefetchLink
-                  to="/happ-crypto/"
-                  preload="cryptoLink"
-                  style={{ display: "block", width: "100%" }}
-                >
-                  <Button
-                    size="sm"
-                    h="52px"
-                    w="full"
-                    px={4}
-                    textAlign="left"
-                    justifyContent="flex-start"
-                    leftIcon={<CryptoLinkIcon />}
-                    className="sidebar-btn"
-                  >
-                    {t("sidebar.happyCrypto")}
-                  </Button>
-                </PrefetchLink>
-              )}
 
               {isSudo() && (
                 <>

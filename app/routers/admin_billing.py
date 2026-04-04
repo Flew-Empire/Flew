@@ -171,7 +171,7 @@ def list_admin_billing_admins(
 ):
     _ensure_billing_feature_enabled()
     if not is_billing_manager(current_admin.username):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only moor can manage billing")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only billing manager can manage billing")
 
     profiles = {
         item.admin_username: item
@@ -226,7 +226,7 @@ def set_admin_billing_rate(
 ):
     _ensure_billing_feature_enabled()
     if not is_billing_manager(current_admin.username):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only moor can manage billing")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only billing manager can manage billing")
 
     dbadmin = crud.get_admin(db, admin_username)
     if not dbadmin:
@@ -253,7 +253,7 @@ def mark_admin_billing_paid(
 ):
     _ensure_billing_feature_enabled()
     if not is_billing_manager(current_admin.username):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only moor can manage billing")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only billing manager can manage billing")
 
     dbadmin = crud.get_admin(db, admin_username)
     if not dbadmin:

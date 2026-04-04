@@ -28,7 +28,7 @@ def exec_proxy(url: str, request: Request):
             raise HTTPException(status_code=400, detail="Invalid host")
 
         host = request.url.hostname
-        allowed_hosts = {h for h in [host, "enter.turkmendili.ru"] if h}
+        allowed_hosts = {h for h in [host] if h}
         if parsed.hostname not in allowed_hosts:
             raise HTTPException(status_code=403, detail="Host not allowed")
 

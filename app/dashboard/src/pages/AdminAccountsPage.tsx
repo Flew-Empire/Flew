@@ -203,6 +203,9 @@ export const AdminAccountsPage: FC = () => {
   const isSudo = !!userData?.is_sudo;
   const currentAdminUsername = userData?.username || "";
   const chatPermissionsEnabled = hasFeature("admin_chat");
+  const adminLimitsEnabled = hasFeature("admin_limits");
+  const ipLimitsEnabled = hasFeature("ip_limits");
+  const deviceLimitEnabled = hasFeature("device_limit");
 
   const loadAdmins = useCallback(
     async (preferredUsername?: string) => {
@@ -332,11 +335,23 @@ export const AdminAccountsPage: FC = () => {
       telegram_id: parseNullableInteger(form.telegram_id, 0),
       discord_webhook: form.discord_webhook.trim() || null,
       subscription_url_prefix: form.subscription_url_prefix.trim() || null,
-      users_limit: parseNullableInteger(form.users_limit, 0),
-      traffic_limit: toTrafficBytes(form.traffic_limit, form.traffic_unit),
-      unique_ip_limit: parseNullableInteger(form.unique_ip_limit, 1),
-      device_limit: parseNullableInteger(form.device_limit, 1),
     };
+
+    if (adminLimitsEnabled) {
+      payload.users_limit = parseNullableInteger(form.users_limit, 0);
+      payload.traffic_limit = toTrafficBytes(
+        form.traffic_limit,
+        form.traffic_unit
+      );
+    }
+
+    if (ipLimitsEnabled) {
+      payload.unique_ip_limit = parseNullableInteger(form.unique_ip_limit, 1);
+    }
+
+    if (deviceLimitEnabled) {
+      payload.device_limit = parseNullableInteger(form.device_limit, 1);
+    }
 
     if (isCreate) {
       payload.username = form.username.trim();
@@ -643,64 +658,77 @@ export const AdminAccountsPage: FC = () => {
                         updateCreateField("telegram_id", event.target.value)
                       }
                     />
-                    <Input
-                      label={t("adminAccounts.usersLimit")}
-                      type="number"
-                      value={createForm.users_limit}
-                      onChange={(event) =>
-                        updateCreateField("users_limit", event.target.value)
-                      }
-                    />
+                    {adminLimitsEnabled ? (
+                      <Input
+                        label={t("adminAccounts.usersLimit")}
+                        type="number"
+                        value={createForm.users_limit}
+                        onChange={(event) =>
+                          updateCreateField("users_limit", event.target.value)
+                        }
+                      />
+                    ) : null}
                   </SimpleGrid>
 
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                    <FormControl>
-                      <FormLabel>{t("adminAccounts.trafficLimit")}</FormLabel>
-                      <HStack align="stretch">
+                  {adminLimitsEnabled || ipLimitsEnabled ? (
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                      {adminLimitsEnabled ? (
+                        <FormControl>
+                          <FormLabel>{t("adminAccounts.trafficLimit")}</FormLabel>
+                          <HStack align="stretch">
+                            <Input
+                              type="number"
+                              value={createForm.traffic_limit}
+                              onChange={(event) =>
+                                updateCreateField(
+                                  "traffic_limit",
+                                  event.target.value
+                                )
+                              }
+                            />
+                            <Select
+                              value={createForm.traffic_unit}
+                              onChange={(event) =>
+                                updateCreateField(
+                                  "traffic_unit",
+                                  event.target.value as TrafficUnit
+                                )
+                              }
+                              maxW="100px"
+                            >
+                              <option value="GB">GB</option>
+                              <option value="TB">TB</option>
+                            </Select>
+                          </HStack>
+                        </FormControl>
+                      ) : null}
+                      {ipLimitsEnabled ? (
                         <Input
+                          label={t("adminAccounts.uniqueIpLimit")}
                           type="number"
-                          value={createForm.traffic_limit}
-                          onChange={(event) =>
-                            updateCreateField("traffic_limit", event.target.value)
-                          }
-                        />
-                        <Select
-                          value={createForm.traffic_unit}
+                          value={createForm.unique_ip_limit}
                           onChange={(event) =>
                             updateCreateField(
-                              "traffic_unit",
-                              event.target.value as TrafficUnit
+                              "unique_ip_limit",
+                              event.target.value
                             )
                           }
-                          maxW="100px"
-                        >
-                          <option value="GB">GB</option>
-                          <option value="TB">TB</option>
-                        </Select>
-                      </HStack>
-                    </FormControl>
-                    <Input
-                      label={t("adminAccounts.uniqueIpLimit")}
-                      type="number"
-                      value={createForm.unique_ip_limit}
-                      onChange={(event) =>
-                        updateCreateField(
-                          "unique_ip_limit",
-                          event.target.value
-                        )
-                      }
-                    />
-                  </SimpleGrid>
+                        />
+                      ) : null}
+                    </SimpleGrid>
+                  ) : null}
 
                   <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                    <Input
-                      label={t("adminAccounts.deviceLimit")}
-                      type="number"
-                      value={createForm.device_limit}
-                      onChange={(event) =>
-                        updateCreateField("device_limit", event.target.value)
-                      }
-                    />
+                    {deviceLimitEnabled ? (
+                      <Input
+                        label={t("adminAccounts.deviceLimit")}
+                        type="number"
+                        value={createForm.device_limit}
+                        onChange={(event) =>
+                          updateCreateField("device_limit", event.target.value)
+                        }
+                      />
+                    ) : null}
                     <Input
                       label={t("adminAccounts.subscriptionPrefix")}
                       value={createForm.subscription_url_prefix}
@@ -956,70 +984,83 @@ export const AdminAccountsPage: FC = () => {
                               updateEditField("telegram_id", event.target.value)
                             }
                           />
-                          <Input
-                            label={t("adminAccounts.usersLimit")}
-                            type="number"
-                            value={editForm.users_limit}
-                            onChange={(event) =>
-                              updateEditField("users_limit", event.target.value)
-                            }
-                          />
+                          {adminLimitsEnabled ? (
+                            <Input
+                              label={t("adminAccounts.usersLimit")}
+                              type="number"
+                              value={editForm.users_limit}
+                              onChange={(event) =>
+                                updateEditField(
+                                  "users_limit",
+                                  event.target.value
+                                )
+                              }
+                            />
+                          ) : null}
                         </SimpleGrid>
 
-                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                          <FormControl>
-                            <FormLabel>{t("adminAccounts.trafficLimit")}</FormLabel>
-                            <HStack align="stretch">
+                        {adminLimitsEnabled || ipLimitsEnabled ? (
+                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                            {adminLimitsEnabled ? (
+                              <FormControl>
+                                <FormLabel>{t("adminAccounts.trafficLimit")}</FormLabel>
+                                <HStack align="stretch">
+                                  <Input
+                                    type="number"
+                                    value={editForm.traffic_limit}
+                                    onChange={(event) =>
+                                      updateEditField(
+                                        "traffic_limit",
+                                        event.target.value
+                                      )
+                                    }
+                                  />
+                                  <Select
+                                    value={editForm.traffic_unit}
+                                    onChange={(event) =>
+                                      updateEditField(
+                                        "traffic_unit",
+                                        event.target.value as TrafficUnit
+                                      )
+                                    }
+                                    maxW="100px"
+                                  >
+                                    <option value="GB">GB</option>
+                                    <option value="TB">TB</option>
+                                  </Select>
+                                </HStack>
+                              </FormControl>
+                            ) : null}
+                            {ipLimitsEnabled ? (
                               <Input
+                                label={t("adminAccounts.uniqueIpLimit")}
                                 type="number"
-                                value={editForm.traffic_limit}
+                                value={editForm.unique_ip_limit}
                                 onChange={(event) =>
                                   updateEditField(
-                                    "traffic_limit",
+                                    "unique_ip_limit",
                                     event.target.value
                                   )
                                 }
                               />
-                              <Select
-                                value={editForm.traffic_unit}
-                                onChange={(event) =>
-                                  updateEditField(
-                                    "traffic_unit",
-                                    event.target.value as TrafficUnit
-                                  )
-                                }
-                                maxW="100px"
-                              >
-                                <option value="GB">GB</option>
-                                <option value="TB">TB</option>
-                              </Select>
-                            </HStack>
-                          </FormControl>
-                          <Input
-                            label={t("adminAccounts.uniqueIpLimit")}
-                            type="number"
-                            value={editForm.unique_ip_limit}
-                            onChange={(event) =>
-                              updateEditField(
-                                "unique_ip_limit",
-                                event.target.value
-                              )
-                            }
-                          />
-                        </SimpleGrid>
+                            ) : null}
+                          </SimpleGrid>
+                        ) : null}
 
                         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                          <Input
-                            label={t("adminAccounts.deviceLimit")}
-                            type="number"
-                            value={editForm.device_limit}
-                            onChange={(event) =>
-                              updateEditField(
-                                "device_limit",
-                                event.target.value
-                              )
-                            }
-                          />
+                          {deviceLimitEnabled ? (
+                            <Input
+                              label={t("adminAccounts.deviceLimit")}
+                              type="number"
+                              value={editForm.device_limit}
+                              onChange={(event) =>
+                                updateEditField(
+                                  "device_limit",
+                                  event.target.value
+                                )
+                              }
+                            />
+                          ) : null}
                           <Input
                             label={t("adminAccounts.subscriptionPrefix")}
                             value={editForm.subscription_url_prefix}

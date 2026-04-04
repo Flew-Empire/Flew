@@ -177,7 +177,7 @@ def get_unique_ip_limit_state_for_username(username: str) -> Dict[str, Any]:
     except Exception:
         parsed_limit = None
 
-    has_custom_limit = parsed_limit is not None and parsed_limit > 0 and parsed_limit != DEFAULT_UNIQUE_IP_LIMIT
+    has_custom_limit = parsed_limit is not None and parsed_limit > 0
     effective_limit = 0 if disabled else get_unique_ip_limit_for_username(username)
     return {
         "limit": int(effective_limit) if effective_limit > 0 else DEFAULT_UNIQUE_IP_LIMIT,
@@ -209,11 +209,7 @@ def set_unique_ip_limit_for_username(username: str, limit: Optional[int]) -> Non
             entry["disabled"] = True
         else:
             entry["disabled"] = False
-            if limit == DEFAULT_UNIQUE_IP_LIMIT:
-                # clear override only
-                entry.pop("limit", None)
-            else:
-                entry["limit"] = limit
+            entry["limit"] = limit
             # If limit is 1, drop standby slot.
             if int(limit) <= 1:
                 entry["standby_ip"] = None

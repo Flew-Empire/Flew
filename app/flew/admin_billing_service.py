@@ -6,9 +6,10 @@ from typing import Optional
 from app.db import Session, crud
 from app.db.models import AdminActionLog, AdminBillingEntry, AdminBillingInvoice
 from config import ADMIN_CHAT_MAIN_ADMIN
+from app.utils.features import feature_enabled
 
 
-MAIN_ADMIN_USERNAME = (ADMIN_CHAT_MAIN_ADMIN or "moor").strip().lower() or "moor"
+MAIN_ADMIN_USERNAME = (ADMIN_CHAT_MAIN_ADMIN or "").strip().lower()
 
 
 def normalize_admin_username(value: Optional[str]) -> str:
@@ -157,6 +158,9 @@ def register_billing_from_action_log(
     db: Session,
     action_log: AdminActionLog,
 ) -> Optional[AdminBillingEntry]:
+    if not feature_enabled("admin_billing"):
+        return None
+
     if action_log is None:
         return None
 

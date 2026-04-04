@@ -4,6 +4,7 @@ import {
   Button,
   Checkbox,
   FormControl,
+  FormErrorMessage,
   FormLabel,
   Grid,
   HStack,
@@ -27,7 +28,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { fetchInbounds } from "contexts/DashboardContext";
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fetch } from "service/http";
 import { copyToClipboard } from "utils/clipboard";
@@ -123,6 +124,64 @@ const tryParseInboundObject = (value: string): RawInbound | null => {
   }
 
   return null;
+};
+
+const formatJsonSyntaxError = (source: string, error: SyntaxError) => {
+  const message = String(error?.message || "Invalid JSON");
+  const positionMatch = message.match(/position\s+(\d+)/i);
+
+  if (!positionMatch) {
+    return message;
+  }
+
+  const position = Number(positionMatch[1]);
+  if (!Number.isFinite(position) || position < 0) {
+    return message;
+  }
+
+  const beforeError = source.slice(0, position);
+  const line = beforeError.split("\n").length;
+  const column = beforeError.length - beforeError.lastIndexOf("\n");
+  return `JSON error on line ${line}, column ${column}: ${message}`;
+};
+
+const getInboundDraftError = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return "Inbound must be a JSON object.";
+    }
+
+    const tag = String(parsed.tag || "").trim();
+    const protocol = String(parsed.protocol || "").trim();
+    const portValue = parsed.port;
+    const port =
+      typeof portValue === "number"
+        ? portValue
+        : Number.parseInt(String(portValue || "").trim(), 10);
+
+    if (!tag) {
+      return 'Missing required field: "tag".';
+    }
+    if (!protocol) {
+      return 'Missing required field: "protocol".';
+    }
+    if (!Number.isFinite(port) || port < 1 || port > 65535) {
+      return 'Field "port" must be a valid port from 1 to 65535.';
+    }
+
+    return null;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return formatJsonSyntaxError(value, error);
+    }
+    return String(error);
+  }
 };
 
 const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
@@ -280,6 +339,7 @@ export const InboundsPage: FC = () => {
   const toast = useToast();
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const generatorFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const editorScrollbarTimerRef = useRef<number | null>(null);
 
   const [rawInbounds, setRawInbounds] = useState<RawInbound[]>([]);
   const [jsonInput, setJsonInput] = useState("");
@@ -290,6 +350,8 @@ export const InboundsPage: FC = () => {
   const [draggingTag, setDraggingTag] = useState<string | null>(null);
   const [dropTag, setDropTag] = useState<string | null>(null);
   const [useCoreConfigFallback, setUseCoreConfigFallback] = useState(true);
+  const [editorRuntimeError, setEditorRuntimeError] = useState("");
+  const [editorScrollbarVisible, setEditorScrollbarVisible] = useState(false);
   const [generatorForm, setGeneratorForm] =
     useState<GeneratorFormState>(DEFAULT_GENERATOR_FORM);
 
@@ -302,6 +364,7 @@ export const InboundsPage: FC = () => {
     xl: "1900px",
   });
   const editorInbound = tryParseInboundObject(jsonInput);
+  const editorDraftError = useMemo(() => getInboundDraftError(jsonInput), [jsonInput]);
   const editorPortValue =
     typeof editorInbound?.port === "number" || typeof editorInbound?.port === "string"
       ? String(editorInbound.port)
@@ -365,7 +428,7 @@ export const InboundsPage: FC = () => {
     try {
       const result = await loadRawInboundsFromCoreConfig();
       setRawInbounds(Array.isArray(result) ? result : []);
-    } catch (error) {
+    } catch (error: any) {
       showError(error, "Не удалось загрузить raw inbound");
     } finally {
       setLoadingRaw(false);
@@ -383,6 +446,32 @@ export const InboundsPage: FC = () => {
     void refreshAll();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (editorScrollbarTimerRef.current !== null) {
+        window.clearTimeout(editorScrollbarTimerRef.current);
+      }
+    };
+  }, []);
+
+  const revealEditorScrollbar = () => {
+    setEditorScrollbarVisible(true);
+    if (editorScrollbarTimerRef.current !== null) {
+      window.clearTimeout(editorScrollbarTimerRef.current);
+      editorScrollbarTimerRef.current = null;
+    }
+  };
+
+  const scheduleHideEditorScrollbar = (delay = 900) => {
+    if (editorScrollbarTimerRef.current !== null) {
+      window.clearTimeout(editorScrollbarTimerRef.current);
+    }
+    editorScrollbarTimerRef.current = window.setTimeout(() => {
+      setEditorScrollbarVisible(false);
+      editorScrollbarTimerRef.current = null;
+    }, delay);
+  };
+
   const saveInboundPayload = async (
     inboundPayload: Record<string, unknown>,
     currentEditingTag: string | null
@@ -399,6 +488,7 @@ export const InboundsPage: FC = () => {
     }
 
     setSubmitting(true);
+    setEditorRuntimeError("");
     try {
       const isRenamingTag =
         Boolean(currentEditingTag) && currentEditingTag !== targetTag;
@@ -489,7 +579,15 @@ export const InboundsPage: FC = () => {
       });
 
       await refreshAll();
-    } catch (error) {
+    } catch (error: any) {
+      setEditorRuntimeError(
+        error?.data?.detail ||
+          error?.response?._data?.detail ||
+          error?.message ||
+          (currentEditingTag
+            ? "Не удалось обновить inbound"
+            : "Не удалось добавить inbound")
+      );
       showError(
         error,
         currentEditingTag
@@ -503,6 +601,7 @@ export const InboundsPage: FC = () => {
 
   const handleSaveEditor = async () => {
     if (!jsonInput.trim()) {
+      setEditorRuntimeError("Вставьте JSON конфигурацию inbound.");
       toast({
         title: "Пустое поле",
         description: "Вставьте JSON конфигурацию inbound",
@@ -512,14 +611,28 @@ export const InboundsPage: FC = () => {
       return;
     }
 
+    if (editorDraftError) {
+      setEditorRuntimeError(editorDraftError);
+      toast({
+        title: "Проверьте inbound",
+        description: editorDraftError,
+        status: "error",
+        duration: 4000,
+      });
+      return;
+    }
+
     try {
       const parsedInbound = JSON.parse(jsonInput);
+      setEditorRuntimeError("");
       await saveInboundPayload(parsedInbound, editingTag);
     } catch (error: any) {
       if (error instanceof SyntaxError) {
+        const message = formatJsonSyntaxError(jsonInput, error);
+        setEditorRuntimeError(message);
         toast({
           title: "Невалидный JSON",
-          description: "Проверьте формат JSON",
+          description: message,
           status: "error",
           duration: 4000,
         });
@@ -672,6 +785,7 @@ export const InboundsPage: FC = () => {
   const setEditorPayload = (inbound: RawInbound) => {
     setEditingTag(inbound.tag);
     setJsonInput(stringifyInbound(inbound));
+    setEditorRuntimeError("");
     focusEditor();
   };
 
@@ -731,6 +845,7 @@ export const InboundsPage: FC = () => {
   const resetEditor = () => {
     setEditingTag(null);
     setJsonInput("");
+    setEditorRuntimeError("");
   };
 
   return (
@@ -843,24 +958,59 @@ export const InboundsPage: FC = () => {
               </Button>
             </HStack>
 
-            <Textarea
-              ref={editorRef}
-              value={jsonInput}
-              onChange={(event) => setJsonInput(event.target.value)}
-              placeholder='{"tag": "my-inbound", "listen": "0.0.0.0", "port": 443, "protocol": "vless"}'
-              minH={{ base: "320px", lg: "640px" }}
-              fontFamily="monospace"
-              fontSize="13px"
-              bg="var(--input-bg)"
-              border="1px solid var(--border)"
-              borderRadius="14px"
-              resize="vertical"
-              _placeholder={{ color: "var(--faint)" }}
-              _focus={{
-                borderColor: "var(--blue)",
-                boxShadow: "0 0 0 1px var(--blue)",
-              }}
-            />
+            <FormControl isInvalid={Boolean(editorRuntimeError || editorDraftError)}>
+              <Textarea
+                ref={editorRef}
+                value={jsonInput}
+                onChange={(event) => {
+                  setJsonInput(event.target.value);
+                  setEditorRuntimeError("");
+                }}
+                onFocus={() => revealEditorScrollbar()}
+                onBlur={() => scheduleHideEditorScrollbar(180)}
+                onScroll={() => {
+                  revealEditorScrollbar();
+                  scheduleHideEditorScrollbar();
+                }}
+                onMouseEnter={() => revealEditorScrollbar()}
+                onMouseLeave={() => scheduleHideEditorScrollbar()}
+                onTouchStart={() => {
+                  revealEditorScrollbar();
+                  scheduleHideEditorScrollbar(1200);
+                }}
+                placeholder='{"tag": "my-inbound", "listen": "0.0.0.0", "port": 443, "protocol": "vless"}'
+                minH={{ base: "320px", lg: "640px" }}
+                fontFamily="monospace"
+                fontSize="13px"
+                bg="var(--input-bg)"
+                border="1px solid var(--border)"
+                borderRadius="14px"
+                resize="vertical"
+                overflowY="auto"
+                _placeholder={{ color: "var(--faint)" }}
+                _focus={{
+                  borderColor: "var(--blue)",
+                  boxShadow: "0 0 0 1px var(--blue)",
+                }}
+                sx={{
+                  scrollbarWidth: editorScrollbarVisible ? "thin" : "none",
+                  "&::-webkit-scrollbar": {
+                    width: editorScrollbarVisible ? "8px" : "0px",
+                    height: editorScrollbarVisible ? "8px" : "0px",
+                  },
+                  "&::-webkit-scrollbar-track": {
+                    background: "transparent",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    background: "rgba(148, 163, 184, 0.5)",
+                    borderRadius: "999px",
+                  },
+                }}
+              />
+              <FormErrorMessage>
+                {editorRuntimeError || editorDraftError}
+              </FormErrorMessage>
+            </FormControl>
 
             <HStack
               mt={4}

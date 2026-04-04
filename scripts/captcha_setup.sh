@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ENV_FILE="${1:-/opt/flew/.env}"
-DEFAULT_DOMAIN="merkez.mediatmshow.online"
+DEFAULT_DOMAIN="panel.example.com"
 VENDOR="turnstile"
 
 if [ ! -f "$ENV_FILE" ]; then

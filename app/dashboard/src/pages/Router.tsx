@@ -13,13 +13,8 @@ import { RouteErrorPage } from "./RouteErrorPage";
 import { WorkspaceLayout } from "./WorkspaceLayout";
 import {
     AdminAccountsPage,
-    AdminBillingPage,
-    AdminChatPage,
-    AdminLimitsPage,
     AdminManagerPage,
-    CryptoLinkPage,
     CryptoLinkSettingsPage,
-    FlewPage,
     HostsPage,
     InboundsPage,
     NodesPage,
@@ -75,25 +70,6 @@ const fetchSudoLoader = async () => {
     return admin;
 };
 
-const isXpanelEnabled = (system: any) => {
-    if (system?.xpanel_enabled !== undefined) {
-        return Boolean(system.xpanel_enabled);
-    }
-    const features = Array.isArray(system?.features) ? system.features : [];
-    return features
-        .map((value: unknown) => String(value || "").trim().toLowerCase())
-        .includes("xpanel");
-};
-
-const fetchXpanelLoader = async () => {
-    await fetchAdminLoader();
-    const system = await fetch("/system");
-    if (!isXpanelEnabled(system)) {
-        return redirect("/");
-    }
-    return system;
-};
-
 export const router = createHashRouter([
     {
         path: "/",
@@ -118,33 +94,12 @@ export const router = createHashRouter([
                 element: renderLazyRoute(HostsPage),
             },
             {
-                path: "admin-billing/",
-                element: renderLazyRoute(AdminBillingPage),
-            },
-            {
-                path: "admin-chat/",
-                element: renderLazyRoute(AdminChatPage),
-            },
-            {
                 path: "admin-accounts/",
                 element: renderLazyRoute(AdminAccountsPage),
                 loader: fetchSudoLoader,
             },
             {
-                path: "admin-limits/",
-                element: renderLazyRoute(AdminLimitsPage),
-            },
-            {
-                path: "happ-crypto/",
-                element: renderLazyRoute(CryptoLinkPage),
-            },
-            {
                 path: "subscription-settings/",
-                element: renderLazyRoute(CryptoLinkSettingsPage),
-                loader: fetchSudoLoader,
-            },
-            {
-                path: "happ-crypto/settings/",
                 element: renderLazyRoute(CryptoLinkSettingsPage),
                 loader: fetchSudoLoader,
             },
@@ -163,12 +118,6 @@ export const router = createHashRouter([
         element: renderLazyRoute(AdminManagerPage),
         errorElement: <RouteErrorPage />,
         loader: fetchAdminLoader,
-    },
-    {
-        path: "/flew/",
-        element: renderLazyRoute(FlewPage),
-        errorElement: <RouteErrorPage />,
-        loader: fetchXpanelLoader,
     },
     {
         path: "/login",

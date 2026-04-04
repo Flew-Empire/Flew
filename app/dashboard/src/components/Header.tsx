@@ -27,13 +27,10 @@ import {
   AdjustmentsHorizontalIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  BanknotesIcon,
   ChartPieIcon,
-  ChatBubbleLeftRightIcon,
   ClipboardDocumentListIcon,
   DocumentMinusIcon,
   LinkIcon,
-  LockClosedIcon,
   MoonIcon,
   RectangleStackIcon,
   SquaresPlusIcon,
@@ -41,14 +38,14 @@ import {
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import useGetUser from "hooks/useGetUser";
-import { useAdminChatSummary } from "hooks/useAdminChatSummary";
 import { useFeatures } from "hooks/useFeatures";
 import { FC, ReactElement, ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 import { useDashboard } from "contexts/DashboardContext";
 import { updateThemeColor } from "utils/themeColor";
-import { removeAuthToken } from "utils/authStorage";
+import { buildDashboardUrl, removeAuthToken } from "utils/authStorage";
+import { queryClient } from "utils/react-query";
 import { PrefetchLink } from "./PrefetchLink";
 import { Language } from "./Language";
 
@@ -148,10 +145,7 @@ const AdminManagerIcon = chakra(
   ClipboardDocumentListIcon,
   neonAdminManagerIconProps
 );
-const AdminBillingIcon = chakra(BanknotesIcon, neonAdminManagerIconProps);
-const CryptoLinkIcon = chakra(LockClosedIcon, neonCryptoIconProps);
 const CryptoSettingsIcon = chakra(AdjustmentsHorizontalIcon, neonCryptoIconProps);
-const AdminChatIcon = chakra(ChatBubbleLeftRightIcon, neonCryptoIconProps);
 const LogoutIcon = chakra(ArrowLeftOnRectangleIcon, neonLogoutIconProps);
 const MenuIcon = chakra(Bars3Icon, plainHeaderIconProps);
 
@@ -220,7 +214,6 @@ const HeaderThemeToggle: FC<{ compact?: boolean }> = ({ compact = false }) => {
 export const Header: FC<HeaderProps> = ({ actions }) => {
   const { userData, getUserIsSuccess, getUserIsPending } = useGetUser();
   const { hasFeature, edition } = useFeatures();
-  const { totalUnread, isEnabled: adminChatEnabled } = useAdminChatSummary();
   const location = useLocation();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
@@ -237,7 +230,6 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
     return false;
   };
   const canLogout = !getUserIsPending && getUserIsSuccess;
-  const showAdminChat = adminChatEnabled && canLogout;
   const canManageAdminAccounts = isSudo() && hasFeature("admin_accounts");
   const canManageSubscriptionSettings =
     isSudo() && hasFeature("subscription_settings");
@@ -284,62 +276,19 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
 
   const isActive = (navKey: string) => {
     if (navKey === "inbounds") return location.pathname.startsWith("/inbounds");
-    if (navKey === "flew") return location.pathname === "/flew/";
     if (navKey === "nodes") return location.pathname.startsWith("/nodes");
     if (navKey === "hosts") return location.pathname.startsWith("/hosts");
-    if (navKey === "adminLimits")
-      return location.pathname.startsWith("/admin-limits");
     if (navKey === "adminAccounts")
       return location.pathname.startsWith("/admin-accounts");
-    if (navKey === "adminBilling")
-      return location.pathname.startsWith("/admin-billing");
-    if (navKey === "adminChat")
-      return location.pathname.startsWith("/admin-chat");
     if (navKey === "subscriptionSettings")
-      return (
-        location.pathname.startsWith("/subscription-settings") ||
-        location.pathname.startsWith("/happ-crypto/settings")
-      );
-    if (navKey === "happyCrypto")
-      return location.pathname === "/happ-crypto/" || location.pathname === "/happ-crypto";
+      return location.pathname.startsWith("/subscription-settings");
     return false;
   };
 
   const showSidebar = location.pathname === "/";
-  const showXpanel = isSudo() && hasFeature("xpanel");
   const showWorkspaceLinks = isSudo();
 
   const baseMobileNavLinks = [
-    showAdminChat && !isSudo()
-      ? {
-          key: "adminChat",
-          to: "/admin-chat/",
-          label: t("header.adminChat"),
-          icon: <AdminChatIcon />,
-          active: isActive("adminChat"),
-          preload: "adminChat" as const,
-        }
-      : null,
-    showXpanel
-      ? {
-          key: "flew",
-          to: "/flew/",
-          label: "XPanel",
-          icon: undefined,
-          active: isActive("flew"),
-          preload: "flew" as const,
-        }
-      : null,
-    showAdminChat && isSudo()
-      ? {
-          key: "adminChat",
-          to: "/admin-chat/",
-          label: t("header.adminChat"),
-          icon: <AdminChatIcon />,
-          active: isActive("adminChat"),
-          preload: "adminChat" as const,
-        }
-      : null,
     showWorkspaceLinks
       ? {
           key: "inbounds",
@@ -378,20 +327,10 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
     label: string;
     icon?: ReactElement;
     active: boolean;
-    preload?: "adminChat" | "flew" | "inbounds" | "nodes" | "hosts";
+    preload?: "inbounds" | "nodes" | "hosts";
   }[];
 
   const mobileSidebarButtons = [
-    hasFeature("admin_billing")
-      ? {
-          key: "adminBillingLink",
-          to: "/admin-billing/",
-          label: t("sidebar.adminBilling"),
-          icon: <AdminBillingIcon />,
-          active: isActive("adminBilling"),
-          preload: "adminBilling" as const,
-        }
-      : null,
     canManageAdminAccounts
       ? {
           key: "adminAccountsLink",
@@ -412,16 +351,6 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
           preload: "cryptoLinkSettings" as const,
         }
       : null,
-    isSudo() && hasFeature("admin_limits")
-      ? {
-          key: "adminLimitsLink",
-          to: "/admin-limits/",
-          label: t("sidebar.adminLimits"),
-          icon: <AdminLimitsIcon />,
-          active: isActive("adminLimits"),
-          preload: "adminLimits" as const,
-        }
-      : null,
     isSudo() && hasFeature("admin_manager")
       ? {
           key: "adminManagerLink",
@@ -429,16 +358,6 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
           label: t("sidebar.adminManager"),
           icon: <AdminManagerIcon />,
           preload: "adminManager" as const,
-        }
-      : null,
-    hasFeature("happ_crypto")
-      ? {
-          key: "happyCryptoLink",
-          to: "/happ-crypto/",
-          label: t("sidebar.happyCrypto"),
-          icon: <CryptoLinkIcon />,
-          active: isActive("happyCrypto"),
-          preload: "cryptoLink" as const,
         }
       : null,
     isSudo()
@@ -460,10 +379,7 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
     key:
       | SidebarActionKey
       | "adminAccountsLink"
-      | "adminBillingLink"
       | "adminManagerLink"
-      | "adminLimitsLink"
-      | "happyCryptoLink"
       | "subscriptionSettingsLink";
     label: string;
     icon: ReactElement;
@@ -472,10 +388,7 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
     active?: boolean;
     preload?:
       | "adminAccounts"
-      | "adminBilling"
       | "adminManager"
-      | "adminLimits"
-      | "cryptoLink"
       | "cryptoLinkSettings";
   }>;
 
@@ -514,41 +427,11 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
     </Box>
   );
 
-  const renderAdminChatButton = (compact = false) => (
-    <Box position="relative" display="inline-flex">
-      <PrefetchLink to="/admin-chat/" preload="adminChat">
-        <IconButton
-          aria-label={t("header.adminChat")}
-          size="sm"
-          variant="ghost"
-          className={compact ? "icon-btn header-icon-btn" : "nav-link header-icon-btn"}
-          icon={<AdminChatIcon />}
-        />
-      </PrefetchLink>
-      {totalUnread > 0 ? (
-        <Badge
-          position="absolute"
-          top="-4px"
-          right="-4px"
-          minW="18px"
-          h="18px"
-          px="5px"
-          borderRadius="full"
-          colorScheme="red"
-          display="inline-flex"
-          alignItems="center"
-          justifyContent="center"
-          pointerEvents="none"
-        >
-          {totalUnread > 99 ? "99+" : totalUnread}
-        </Badge>
-      ) : null}
-    </Box>
-  );
-
   const handleLogout = () => {
     removeAuthToken();
+    queryClient.clear();
     onClose();
+    window.location.replace(buildDashboardUrl("/login/"));
   };
 
   return (
@@ -563,7 +446,7 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
         py={{ base: 3, md: 4 }}
       >
         <HStack justifyContent="space-between" alignItems="center" gap={3}>
-          <Link to="/" style={{ minWidth: 0 }}>
+          {isFreeEdition ? (
             <HStack gap={{ base: 2, md: 4 }} minW={0}>
               <Box
                 as="img"
@@ -599,9 +482,47 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
                 </Text>
               </Box>
             </HStack>
-          </Link>
+          ) : (
+            <Link to="/" style={{ minWidth: 0 }}>
+              <HStack gap={{ base: 2, md: 4 }} minW={0}>
+                <Box
+                  as="img"
+                  src="/logo.svg"
+                  alt={`${brandName} logo`}
+                  w={{ base: "40px", md: "45px" }}
+                  h={{ base: "40px", md: "45px" }}
+                  flexShrink={0}
+                  display="block"
+                />
+                <Box minW={0}>
+                  <Text
+                    as="span"
+                    display={{ base: "none", sm: "inline" }}
+                    fontSize={{ sm: "lg", md: "2xl" }}
+                    fontWeight="700"
+                    letterSpacing="-0.5px"
+                    className="logo-text"
+                  >
+                    {brandName}
+                  </Text>
+                  <Text
+                    as="span"
+                    display={{ base: "inline", sm: "none" }}
+                    fontSize="sm"
+                    fontWeight="700"
+                    letterSpacing="-0.3px"
+                    lineHeight="1"
+                    whiteSpace="nowrap"
+                    className="logo-text"
+                  >
+                    {brandName}
+                  </Text>
+                </Box>
+              </HStack>
+            </Link>
+          )}
 
-          {/* CENTER: Nav links — XPanel, Inbounds, Nodes, Hosts */}
+          {/* CENTER: Nav links — Inbounds, Nodes, Hosts */}
           <HStack
             gap={2}
             display={{ base: "none", md: "flex" }}
@@ -609,18 +530,6 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
             flex="1"
             justifyContent="center"
           >
-            {showXpanel && (
-              <PrefetchLink to="/flew/" preload="flew">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className={`nav-link ${isActive("flew") ? "active" : ""}`}
-                >
-                  XPanel
-                </Button>
-              </PrefetchLink>
-            )}
-
             {showWorkspaceLinks && (
               <>
                 <PrefetchLink to="/inbounds/" preload="inbounds">
@@ -665,7 +574,6 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
             display={{ base: "none", md: "flex" }}
             flexShrink={0}
           >
-            {showAdminChat ? renderAdminChatButton() : null}
             <Language />
             {isFreeEdition ? renderSupportButton() : null}
             <HeaderThemeToggle />
@@ -829,7 +737,26 @@ export const Header: FC<HeaderProps> = ({ actions }) => {
                 </Box>
               </VStack>
 
-              {canLogout && (
+              {canLogout && !isSudo() && (
+                <Box mt={2}>
+                  <Link to="/login/" onClick={handleLogout} style={{ display: "block" }}>
+                    <Button
+                      size="sm"
+                      h="50px"
+                      w="full"
+                      px={4}
+                      textAlign="left"
+                      justifyContent="flex-start"
+                      leftIcon={<LogoutIcon />}
+                      className="sidebar-btn"
+                    >
+                      {t("header.logout")}
+                    </Button>
+                  </Link>
+                </Box>
+              )}
+
+              {canLogout && isSudo() && (
                 <Box mt={6} pt={4} borderTop="1px solid var(--divider)">
                   <Link to="/login/" onClick={handleLogout} style={{ display: "block" }}>
                     <Button

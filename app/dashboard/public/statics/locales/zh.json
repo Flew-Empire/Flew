@@ -39,7 +39,7 @@
     "chatPermissionsSaveError": "保存聊天权限失败"
   },
   "adminChat.title": "管理员聊天",
-  "adminChat.subtitle": "面板管理员之间的私信，moor 作为主联系人。",
+  "adminChat.subtitle": "面板管理员之间的私信，由主管理员作为主要联系人。",
   "adminChat.contacts": "联系人",
   "adminChat.noContacts": "当前没有可聊天的管理员。",
   "adminChat.noMessages": "暂无消息",
@@ -54,7 +54,7 @@
   "adminChat.statusRead": "已读",
   "adminChat.unreadBadge": "未读：{{count}}",
   "adminBilling.title": "管理员账单",
-  "adminBilling.managerSubtitle": "为每个管理员设置每次操作的价格，并由 moor 关闭他们的账单。",
+  "adminBilling.managerSubtitle": "为每个管理员设置每次操作的价格，并由账单管理员关闭他们的账单。",
   "adminBilling.adminSubtitle": "你当前的账单小票和用户操作计费历史。",
   "adminBilling.currentDueBadge": "当前应付：{{amount}}",
   "adminBilling.refresh": "刷新",

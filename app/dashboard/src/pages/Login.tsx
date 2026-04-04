@@ -21,7 +21,7 @@ import { z } from "zod";
 import { Footer } from "components/Footer";
 import { Input } from "components/Input";
 import { fetch } from "service/http";
-import { setAuthToken } from "utils/authStorage";
+import { buildDashboardUrl, setAuthToken } from "utils/authStorage";
 import { ReactComponent as Logo } from "assets/logo.svg";
 import LoginLightLogo from "assets/login-light-logo.svg";
 import { useTranslation } from "react-i18next";
@@ -171,10 +171,7 @@ export const Login: FC = () => {
     fetch("/api/admin/token", { method: "post", body: formData })
       .then(({ access_token: token }) => {
         setAuthToken(token);
-        // Добавляем небольшую задержку перед навигацией
-        setTimeout(() => {
-          navigate("/");
-        }, 100);
+        window.location.replace(buildDashboardUrl("/"));
       })
       .catch((err) => {
         console.error("Login failed:", err);

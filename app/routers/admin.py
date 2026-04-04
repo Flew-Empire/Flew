@@ -55,10 +55,7 @@ def _raise_login_error(detail: str, username: str, client_ip: str) -> None:
 
 def _ensure_install_otp_access(admin: Admin) -> None:
     allowed = {item.strip().lower() for item in INSTALL_OTP_ALLOWED_ADMINS if item}
-    if not allowed:
-        allowed = {"moor"}
-
-    if (admin.username or "").strip().lower() not in allowed:
+    if allowed and (admin.username or "").strip().lower() not in allowed:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You're not allowed",

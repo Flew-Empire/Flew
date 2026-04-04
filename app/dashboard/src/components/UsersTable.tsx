@@ -49,7 +49,7 @@ import { copyToClipboard } from "utils/clipboard";
 import { relativeExpiryDate } from "utils/dateFormatter";
 import { formatBytes } from "utils/formatByte";
 import {
-  isUserEditorNotFoundError,
+  isUserEditorUnavailableError,
   prefetchUserEditor,
 } from "utils/userEditorPrefetch";
 import { preloadRoute } from "pages/lazyRoutes";
@@ -117,14 +117,14 @@ const UsageSlider: FC<UsageSliderProps> = (props) => {
   } = props;
   const isUnlimited = total === 0 || total === null;
   const isReached = !isUnlimited && (used / total) * 100 >= 100;
-  const usageVariant = isUnlimited
-    ? "unlimited"
-    : status === "expired"
+  const usageVariant = status === "expired"
     ? "expired"
-    : status === "limited" || isReached
-    ? "limited"
     : status === "disabled" || status === "on_hold"
     ? "disabled"
+    : status === "limited" || isReached
+    ? "limited"
+    : isUnlimited
+    ? "unlimited"
     : "active";
   const limitText = isUnlimited
     ? "Unlimited"
@@ -701,7 +701,7 @@ export const UsersTable: FC<UsersTableProps> = (props) => {
       console.error("Failed to preload subscription editor route:", error);
     });
     prefetchUserEditor(user.username).catch((error) => {
-      if (!isUserEditorNotFoundError(error)) {
+      if (!isUserEditorUnavailableError(error)) {
         console.error("Failed to preload user editor data:", error);
       }
     });
