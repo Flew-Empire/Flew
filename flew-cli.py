@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Flew Free CLI entrypoint."""
+
 import os  # noqa
 import readline  # noqa
 import sys  # noqa

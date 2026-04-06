@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Flew Free systemd installer
 set -euo pipefail
 
 SERVICE_NAME="flew"

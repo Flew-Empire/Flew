@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Flew Free dashboard build helper
 set -euo pipefail
 
 cd "$(dirname "$0")/app/dashboard"

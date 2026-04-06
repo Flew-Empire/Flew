@@ -1,3 +1,5 @@
+"""Flew Free application entrypoint."""
+
 import click
 import logging
 import os

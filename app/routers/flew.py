@@ -991,7 +991,6 @@ async def get_direct_configs_subscription(format: str = "universal", user_token:
             "Traffic-Webhook": f"{config.FLEW_DOMAIN}/api/flew/traffic-webhook",
             "User-Token": user_token or "anonymous"
         }
-
         return PlainTextResponse(content=content, headers=headers)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

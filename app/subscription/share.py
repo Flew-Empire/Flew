@@ -394,25 +394,6 @@ def generate_v2ray_links(proxies: dict, inbounds: dict, extra_data: dict, revers
         from app.flew.service import flew_service
         from app.flew.cluster_service import whitelist_service
         from app.flew.ip_filter import host_filter
-        from app.flew.flew_integration import flew_integration
-        
-        # Автоматическая синхронизация с Flew при генерации подписки
-        # Это гарантирует что Flew конфиги всегда доступны в Flew
-        try:
-            # Проверяем нужно ли синхронизировать (раз в час)
-            import time
-            current_time = time.time()
-            
-            # Получаем время последней синхронизации из кэша или файла
-            last_sync_time = getattr(flew_service, '_last_sync_time', 0)
-            
-            if current_time - last_sync_time > 3600:  # 1 час
-                logger.info("Auto-syncing Flew configs to Flew during subscription generation")
-                flew_integration.sync_active_configs_to_flew()
-                flew_service._last_sync_time = current_time
-        except Exception as sync_error:
-            logger.warning(f"Auto-sync failed: {sync_error}")
-        
         # Получаем разрешенные хосты
         allowed_hosts = whitelist_service.get_all_allowed_hosts()
         logger.info(f"Found {len(allowed_hosts)} allowed hosts in whitelist")

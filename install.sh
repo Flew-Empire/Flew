@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Flew Free installer
 set -euo pipefail
 
 VERSION="1.1.0"

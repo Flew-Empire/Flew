@@ -1,3 +1,4 @@
+# Flew Free repository ignore rules
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

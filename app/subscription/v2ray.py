@@ -521,7 +521,7 @@ class V2rayJsonConfig(str):
     def render(self, reverse=False):
         if reverse:
             self.config.reverse()
-        return json.dumps(self.config, indent=4, cls=UUIDEncoder)
+        return json.dumps(self.config, cls=UUIDEncoder, separators=(",", ":"))
 
     @staticmethod
     def tls_config(sni=None, fp=None, alpn=None, ais: bool = False) -> dict:

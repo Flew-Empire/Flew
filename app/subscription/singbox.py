@@ -66,7 +66,7 @@ class SingBoxConfiguration(str):
 
         if reverse:
             self.config["outbounds"].reverse()
-        return json.dumps(self.config, indent=4,cls=UUIDEncoder)
+        return json.dumps(self.config, cls=UUIDEncoder, separators=(",", ":"))
 
     @staticmethod
     def tls_config(sni=None, fp=None, tls=None, pbk=None,

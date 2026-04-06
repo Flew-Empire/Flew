@@ -1,3 +1,5 @@
+"""Flew Free runtime configuration."""
+
 import os
 
 from decouple import config
