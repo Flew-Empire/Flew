@@ -72,6 +72,9 @@ install_xray() {
 }
 
 clone_repo() {
+    # Avoid deleting the current working directory when the installer
+    # itself is launched from inside INSTALL_DIR.
+    cd /
     rm -rf "$INSTALL_DIR"
     mkdir -p "$INSTALL_DIR"
     git clone --depth 1 https://github.com/Flew-Empire/Flew.git "$INSTALL_DIR"
