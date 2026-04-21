@@ -34,6 +34,7 @@ import {
   Tooltip,
   VStack,
   chakra,
+  useBreakpointValue,
   useToast,
 } from "@chakra-ui/react";
 import {
@@ -51,7 +52,7 @@ import {
 } from "constants/Proxies";
 import { useHosts } from "contexts/HostsContext";
 import { motion } from "framer-motion";
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
 import {
   Controller,
   FormProvider,
@@ -263,191 +264,190 @@ const AccordionInbound: FC<AccordionInboundType> = ({
   };
 
   return (
-    <AccordionItem
-      className="hosts-protocol-card"
-      border="1px solid"
-      _dark={{ borderColor: "gray.600" }}
-      _light={{ borderColor: "gray.200" }}
-      borderRadius="18px"
-      p={1}
-      w="full"
-    >
-      <AccordionButton px={3} py={3} borderRadius="16px" onClick={toggleAccordion}>
-        <HStack w="full" justify="space-between" spacing={3} align="flex-start">
-          <Box textAlign="left" minW={0}>
-            <Text fontWeight="700" fontSize="sm" noOfLines={1}>
-              {hostCardTitle}
-            </Text>
-            <Text fontSize="xs" color="var(--muted)" noOfLines={1} mt={1}>
-              {hostKey}
-            </Text>
-          </Box>
-          <HStack spacing={2} flexShrink={0}>
-            <Badge colorScheme="blue" borderRadius="full">
-              {hosts.length}
-            </Badge>
-            <AccordionIcon />
+    <Accordion allowToggle index={isOpen ? [0] : []} w="full">
+      <AccordionItem
+        className="hosts-protocol-card"
+        border="1px solid"
+        _dark={{ borderColor: "gray.600" }}
+        _light={{ borderColor: "gray.200" }}
+        borderRadius="18px"
+        p={1}
+        w="full"
+      >
+        <AccordionButton px={3} py={3} borderRadius="16px" onClick={toggleAccordion}>
+          <HStack w="full" justify="space-between" spacing={3} align="flex-start">
+            <Box textAlign="left" minW={0}>
+              <Text fontWeight="700" fontSize="sm" noOfLines={1}>
+                {hostCardTitle}
+              </Text>
+              <Text fontSize="xs" color="var(--muted)" noOfLines={1} mt={1}>
+                {hostKey}
+              </Text>
+            </Box>
+            <HStack spacing={2} flexShrink={0}>
+              <Badge colorScheme="blue" borderRadius="full">
+                {hosts.length}
+              </Badge>
+              <AccordionIcon />
+            </HStack>
           </HStack>
-        </HStack>
-      </AccordionButton>
-      <AccordionPanel px={3} pb={3}>
-        <VStack gap={3}>
-          {hosts.map((host, index) => {
-            return (
-              <motion.div
-                key={host.id}
-                layout
-                initial={false}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  layout: { type: "spring", stiffness: 500, damping: 30 },
-                  opacity: { duration: 0.1 },
-                }}
-                id={host.id}
-                whileDrag={{ scale: 1.05, zIndex: 10 }}
-                style={{
-                  width: "100%",
-                }}
-              >
-                <VStack
+        </AccordionButton>
+        <AccordionPanel px={3} pb={3}>
+          <VStack gap={3}>
+            {hosts.map((host, index) => {
+              return (
+                <motion.div
                   id={host.id}
                   key={host.id}
-                  className="hosts-entry-card"
-                  border="1px solid"
-                  _dark={{ borderColor: "gray.600", bg: "#273142" }}
-                  _light={{ borderColor: "gray.200", bg: "#fcfbfb" }}
-                  p={{ base: 3, md: 3 }}
-                  w="full"
-                  borderRadius="16px"
+                  layout
+                  initial={false}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    layout: { type: "spring", stiffness: 500, damping: 30 },
+                    opacity: { duration: 0.1 },
+                  }}
+                  whileDrag={{ scale: 1.05, zIndex: 10 }}
+                  style={{
+                    width: "100%",
+                  }}
                 >
-                  <HStack w="100%" alignItems="flex-start">
-                    <FormControl
-                      position="relative"
-                      zIndex={10}
-                      isInvalid={
-                        !!(accordionErrors && accordionErrors[index]?.remark)
-                      }
-                    >
-                      <InputGroup>
-                        <Input
-                          {...form.register(hostKey + "." + index + ".remark")}
-                          size="sm"
-                          borderRadius="12px"
-                          placeholder="Remark"
-                        />
-                        <InputRightElement>
-                          <Popover isLazy placement="right">
-                            <PopoverTrigger>
-                              <Box mt="-8px">
-                                <InfoIcon />
-                              </Box>
-                            </PopoverTrigger>
-                            <Portal>
-                              <PopoverContent>
-                                <PopoverArrow />
-                                <PopoverCloseButton />
-                                <PopoverBody>
-                                  <Box fontSize="xs">
-                                    <Text pr="20px">
-                                      {t("hostsDialog.desc")}
-                                    </Text>
-                                    <Text>
-                                      <Badge>
-                                        {"{"}SERVER_IP{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.currentServer")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}SERVER_IPV6{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.currentServerv6")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}USERNAME{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.username")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}DATA_USAGE{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.dataUsage")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}DATA_LEFT{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.remainingData")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}DATA_LIMIT{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.dataLimit")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}DAYS_LEFT{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.remainingDays")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}EXPIRE_DATE{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.expireDate")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}JALALI_EXPIRE_DATE{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.jalaliExpireDate")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}TIME_LEFT{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.remainingTime")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}STATUS_TEXT{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.statusText")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}STATUS_EMOJI{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.statusEmoji")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}PROTOCOL{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.proxyProtocol")}
-                                    </Text>
-                                    <Text mt={1}>
-                                      <Badge>
-                                        {"{"}TRANSPORT{"}"}
-                                      </Badge>{" "}
-                                      {t("hostsDialog.proxyMethod")}
-                                    </Text>
-                                  </Box>
-                                </PopoverBody>
-                              </PopoverContent>
-                            </Portal>
-                          </Popover>
-                        </InputRightElement>
-                      </InputGroup>
-                      {accordionErrors && accordionErrors[index]?.remark && (
-                        <Error>{accordionErrors[index]?.remark?.message}</Error>
-                      )}
-                    </FormControl>
-                  </HStack>
+                  <VStack
+                    className="hosts-entry-card"
+                    border="1px solid"
+                    _dark={{ borderColor: "gray.600", bg: "#273142" }}
+                    _light={{ borderColor: "gray.200", bg: "#fcfbfb" }}
+                    p={{ base: 3, md: 3 }}
+                    w="full"
+                    borderRadius="16px"
+                  >
+                    <HStack w="100%" alignItems="flex-start">
+                      <FormControl
+                        position="relative"
+                        zIndex={10}
+                        isInvalid={
+                          !!(accordionErrors && accordionErrors[index]?.remark)
+                        }
+                      >
+                        <InputGroup>
+                          <Input
+                            {...form.register(hostKey + "." + index + ".remark")}
+                            size="sm"
+                            borderRadius="12px"
+                            placeholder="Remark"
+                          />
+                          <InputRightElement>
+                            <Popover isLazy placement="right">
+                              <PopoverTrigger>
+                                <Box mt="-8px">
+                                  <InfoIcon />
+                                </Box>
+                              </PopoverTrigger>
+                              <Portal>
+                                <PopoverContent>
+                                  <PopoverArrow />
+                                  <PopoverCloseButton />
+                                  <PopoverBody>
+                                    <Box fontSize="xs">
+                                      <Text pr="20px">
+                                        {t("hostsDialog.desc")}
+                                      </Text>
+                                      <Text>
+                                        <Badge>
+                                          {"{"}SERVER_IP{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.currentServer")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}SERVER_IPV6{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.currentServerv6")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}USERNAME{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.username")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}DATA_USAGE{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.dataUsage")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}DATA_LEFT{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.remainingData")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}DATA_LIMIT{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.dataLimit")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}DAYS_LEFT{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.remainingDays")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}EXPIRE_DATE{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.expireDate")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}JALALI_EXPIRE_DATE{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.jalaliExpireDate")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}TIME_LEFT{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.remainingTime")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}STATUS_TEXT{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.statusText")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}STATUS_EMOJI{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.statusEmoji")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}PROTOCOL{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.proxyProtocol")}
+                                      </Text>
+                                      <Text mt={1}>
+                                        <Badge>
+                                          {"{"}TRANSPORT{"}"}
+                                        </Badge>{" "}
+                                        {t("hostsDialog.proxyMethod")}
+                                      </Text>
+                                    </Box>
+                                  </PopoverBody>
+                                </PopoverContent>
+                              </Portal>
+                            </Popover>
+                          </InputRightElement>
+                        </InputGroup>
+                        {accordionErrors && accordionErrors[index]?.remark && (
+                          <Error>{accordionErrors[index]?.remark?.message}</Error>
+                        )}
+                      </FormControl>
+                    </HStack>
                   <FormControl
                     isInvalid={
                       !!(accordionErrors && accordionErrors[index]?.address)
@@ -1233,23 +1233,24 @@ const AccordionInbound: FC<AccordionInboundType> = ({
                       </AccordionPanel>
                     </AccordionItem>
                   </Accordion>
-                </VStack>
-              </motion.div>
-            );
-          })}
-          <Button
-            variant="outline"
-            w="full"
-            size="sm"
-            color=""
-            fontWeight={"normal"}
-            onClick={handleAddHost}
-          >
-            {t("hostsDialog.addHost")}
-          </Button>
-        </VStack>
-      </AccordionPanel>
-    </AccordionItem>
+                  </VStack>
+                </motion.div>
+              );
+            })}
+            <Button
+              variant="outline"
+              w="full"
+              size="sm"
+              color=""
+              fontWeight={"normal"}
+              onClick={handleAddHost}
+            >
+              {t("hostsDialog.addHost")}
+            </Button>
+          </VStack>
+        </AccordionPanel>
+      </AccordionItem>
+    </Accordion>
   );
 };
 
@@ -1299,9 +1300,23 @@ export const HostsPanel: FC<HostsPanelProps> = ({ isActive = true }) => {
   const toast = useToast();
   const { t } = useTranslation();
   const [openAccordions, setOpenAccordions] = useState<any>({});
+  const columnCount = useBreakpointValue({ base: 1, md: 2, xl: 3 }) ?? 1;
   const form = useForm<z.infer<typeof hostsSchema>>({
     resolver: zodResolver(hostsSchema),
   });
+
+  const hostKeys = useMemo(() => Object.keys(hosts || {}), [hosts]);
+
+  const hostColumns = useMemo(() => {
+    const safeColumnCount = Math.max(1, columnCount);
+    const columns = Array.from({ length: safeColumnCount }, () => [] as string[]);
+
+    hostKeys.forEach((hostKey, index) => {
+      columns[index % safeColumnCount].push(hostKey);
+    });
+
+    return columns;
+  }, [columnCount, hostKeys]);
 
   useEffect(() => {
     if (isActive) fetchHosts();
@@ -1366,26 +1381,30 @@ export const HostsPanel: FC<HostsPanelProps> = ({ isActive = true }) => {
         {isLoading && t("hostsDialog.loading")}
         {!isLoading &&
           hosts &&
-          (Object.keys(hosts).length > 0 ? (
-            <Accordion
-              w="full"
-              allowToggle
-              allowMultiple
-              index={Object.keys(openAccordions).map((i) => parseInt(i))}
-            >
-              <Box className="hosts-protocol-grid" w="full">
-                {Object.keys(hosts).map((hostKey, index) => {
-                  return (
-                    <AccordionInbound
-                      toggleAccordion={() => toggleAccordion(index)}
-                      isOpen={openAccordions[String(index)]}
-                      key={hostKey}
-                      hostKey={hostKey}
-                    />
-                  );
-                })}
-              </Box>
-            </Accordion>
+          (hostKeys.length > 0 ? (
+            <Box className="hosts-protocol-grid" w="full">
+              {hostColumns.map((column, columnIndex) => (
+                <VStack
+                  key={`hosts-column-${columnIndex}`}
+                  className="hosts-protocol-column"
+                  spacing={4}
+                  align="stretch"
+                >
+                  {column.map((hostKey) => {
+                    const index = hostKeys.indexOf(hostKey);
+
+                    return (
+                      <AccordionInbound
+                        toggleAccordion={() => toggleAccordion(index)}
+                        isOpen={openAccordions[String(index)]}
+                        key={hostKey}
+                        hostKey={hostKey}
+                      />
+                    );
+                  })}
+                </VStack>
+              ))}
+            </Box>
           ) : (
             "No inbound found. Please check your Xray config file."
           ))}

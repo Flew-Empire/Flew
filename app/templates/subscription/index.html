@@ -819,6 +819,31 @@
     </style>
 </head>
 <body>
+    <div
+        id="pageState"
+        class="visually-hidden"
+        data-brand-title="{{ page_payload.branding.title | e }}"
+        data-support-link="{{ page_payload.branding.supportLink | e }}"
+        data-username="{{ page_payload.user.username | e }}"
+        data-status-value="{{ page_payload.user.status.value | e }}"
+        data-status-label="{{ page_payload.user.status.label | e }}"
+        data-status-variant="{{ page_payload.user.status.variant | e }}"
+        data-used-traffic="{{ page_payload.user.usedTraffic | e }}"
+        data-used-traffic-bytes="{{ page_payload.user.usedTrafficBytes }}"
+        data-lifetime-traffic="{{ page_payload.user.lifetimeTraffic | e }}"
+        data-traffic-limit="{{ page_payload.user.trafficLimit | e }}"
+        data-traffic-limit-bytes="{{ page_payload.user.trafficLimitBytes }}"
+        data-expires-at="{{ page_payload.user.expiresAt | e }}"
+        data-expires-unix="{{ page_payload.user.expiresUnix }}"
+        data-days-left="{{ page_payload.user.daysLeft if page_payload.user.daysLeft is not none else '' }}"
+        data-hide-settings="{{ 1 if page_payload.subscription.hideSettings else 0 }}"
+    ></div>
+    <ul id="pageRemarksData" class="visually-hidden" aria-hidden="true">
+        {% for remark in page_payload.user.remarks %}
+        <li>{{ remark }}</li>
+        {% endfor %}
+    </ul>
+    <div id="pageAnnounceData" class="visually-hidden" aria-hidden="true">{{ page_payload.user.announce }}</div>
     <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
     <div class="page">
@@ -896,8 +921,8 @@
         </div>
     </div>
 
-    <script id="pagePayload" type="application/octet-stream">{{ page_payload_b64 }}</script>
     <script>
+        const APP_CATALOG = {{ page_payload.catalog | tojson }};
         const TRANSLATIONS = {
             en: {
                 brandSubtitle: "Smart subscription page",
@@ -1101,14 +1126,109 @@
             }
         };
 
-        function decodePayload() {
-            const raw = document.getElementById("pagePayload").textContent.trim();
-            const binary = atob(raw);
-            const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-            return JSON.parse(new TextDecoder().decode(bytes));
+        function appendClientType(url, clientType) {
+            try {
+                const parsed = new URL(url, window.location.origin);
+                let path = parsed.pathname.replace(/\/$/, "");
+                if (!path.endsWith(`/${clientType}`)) {
+                    path = `${path}/${clientType}`;
+                }
+                parsed.pathname = path;
+                return parsed.toString();
+            } catch (error) {
+                const normalized = String(url || "").replace(/\/$/, "");
+                return `${normalized}/${clientType}`;
+            }
         }
 
-        const payload = decodePayload();
+        function stripSubscriptionSuffix(pathname) {
+            let path = String(pathname || "").replace(/\/$/, "");
+            path = path.replace(/\/launch\/happ-v[345]$/, "");
+            ["sing-box", "clash-meta", "clash", "outline", "v2ray", "v2ray-json"].forEach((clientType) => {
+                const suffix = `/${clientType}`;
+                if (path.endsWith(suffix)) {
+                    path = path.slice(0, -suffix.length);
+                }
+            });
+            return path;
+        }
+
+        function currentSubscriptionPageUrl() {
+            const parsed = new URL(window.location.href);
+            parsed.hash = "";
+            parsed.pathname = stripSubscriptionSuffix(parsed.pathname);
+            return parsed.toString();
+        }
+
+        function buildHappLaunchRoute(variant, mode = "") {
+            const parsed = new URL(currentSubscriptionPageUrl());
+            parsed.pathname = `${parsed.pathname.replace(/\/$/, "")}/launch/${variant}`;
+            if (mode) {
+                parsed.searchParams.set("mode", mode);
+            }
+            return parsed.toString();
+        }
+
+        function buildPayloadFromDom() {
+            const node = document.getElementById("pageState");
+            const data = node ? node.dataset : {};
+            const remarksNode = document.getElementById("pageRemarksData");
+            const announceNode = document.getElementById("pageAnnounceData");
+            const toInt = (value, fallback = 0) => {
+                const parsed = Number.parseInt(String(value ?? ""), 10);
+                return Number.isFinite(parsed) ? parsed : fallback;
+            };
+            const pageUrl = currentSubscriptionPageUrl();
+            const quickLinks = [
+                { id: "auto", label: "Auto" },
+                { id: "v2ray", label: "V2Ray" },
+                { id: "clash_meta", label: "Clash Meta" },
+                { id: "sing_box", label: "Sing-box" },
+                { id: "outline", label: "Outline" },
+            ];
+            quickLinks.splice(1, 0, { id: "happ_v5", label: "Happ v5", secureAction: true, variant: "happ-v5" });
+            quickLinks.push({ id: "happ_v4", label: "Happ v4", secureAction: true, variant: "happ-v4" });
+            quickLinks.push({ id: "happ_v3", label: "Happ v3", secureAction: true, variant: "happ-v3" });
+
+            return {
+                branding: {
+                    title: data.brandTitle || "Flew",
+                    subtitle: "Smart subscription page",
+                    supportLink: data.supportLink || "",
+                },
+                user: {
+                    username: data.username || "",
+                    status: {
+                        value: data.statusValue || "",
+                        label: data.statusLabel || "",
+                        variant: data.statusVariant || "",
+                    },
+                    usedTraffic: data.usedTraffic || "",
+                    usedTrafficBytes: toInt(data.usedTrafficBytes, 0),
+                    lifetimeTraffic: data.lifetimeTraffic || "",
+                    trafficLimit: data.trafficLimit || "",
+                    trafficLimitBytes: toInt(data.trafficLimitBytes, 0),
+                    expiresAt: data.expiresAt || "",
+                    expiresUnix: toInt(data.expiresUnix, 0),
+                    daysLeft: data.daysLeft === "" ? null : toInt(data.daysLeft, 0),
+                    rawLinksExposed: false,
+                    remarks: remarksNode
+                        ? Array.from(remarksNode.querySelectorAll("li"))
+                              .map((item) => item.textContent || "")
+                              .filter(Boolean)
+                        : [],
+                    announce: announceNode ? (announceNode.textContent || "") : "",
+                },
+                subscription: {
+                    pageUrl,
+                    quickLinks,
+                    hideSettings: data.hideSettings === "1",
+                },
+                catalog: APP_CATALOG,
+            };
+        }
+
+        const payload = buildPayloadFromDom();
 
         function getLocale() {
             const lang = (navigator.language || "en").toLowerCase();
@@ -1218,22 +1338,35 @@
         }
 
         function resolveFormatUrl(format) {
-            const links = payload.subscription.clientLinks;
-            if (format === "happ_v5") return payload.subscription.happ.v5;
-            if (format === "happ_v4") return payload.subscription.happ.v4;
-            if (format === "happ_v3") return payload.subscription.happ.v3;
-            if (format === "clash_meta") return links.clash_meta;
-            if (format === "sing_box") return links.sing_box;
-            if (format === "outline") return links.outline;
-            if (format === "v2ray_json") return links.v2ray_json;
-            if (format === "v2ray") return links.v2ray;
-            return links.auto;
+            const pageUrl = currentSubscriptionPageUrl();
+            if (format === "clash_meta") return appendClientType(pageUrl, "clash-meta");
+            if (format === "sing_box") return appendClientType(pageUrl, "sing-box");
+            if (format === "outline") return appendClientType(pageUrl, "outline");
+            if (format === "v2ray_json") return appendClientType(pageUrl, "v2ray-json");
+            if (format === "v2ray") return appendClientType(pageUrl, "v2ray");
+            return pageUrl;
+        }
+
+        async function getProtectedHappLink(variant) {
+            const response = await fetch(buildHappLaunchRoute(variant, "text"), {
+                credentials: "same-origin",
+                headers: {
+                    Accept: "text/plain",
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`Unable to load protected link (${response.status})`);
+            }
+            return (await response.text()).trim();
         }
 
         function buildLaunchUrl(app) {
             if (!app) return "";
+            if (app.format === "happ_v5") {
+                return buildHappLaunchRoute("happ-v5");
+            }
             if (app.launch_mode === "page_url") {
-                const pageUrl = payload.subscription.pageUrl || "";
+                const pageUrl = currentSubscriptionPageUrl();
                 if (!pageUrl) return "";
                 return app.launch_scheme ? `${app.launch_scheme}${pageUrl}` : pageUrl;
             }
@@ -1285,7 +1418,7 @@
                 {
                     label: t.copySubscription,
                     className: "btn btn-primary",
-                    onClick: () => copyText(payload.subscription.pageUrl),
+                    onClick: () => copyText(currentSubscriptionPageUrl()),
                 },
             ];
 
@@ -1443,13 +1576,14 @@
 
             const card = document.createElement("article");
             card.className = "detail-card";
+            const displayUrl = selected.secureAction ? t.rawProtected : resolveFormatUrl(selected.id);
             card.innerHTML = `
                 <div class="detail-tag">${escapeHtml(selected.label)}</div>
                 <h3>${escapeHtml(selected.label)}</h3>
                 <p class="detail-copy">${escapeHtml(t.importFormat)}</p>
                 <div class="detail-linkbox">
                     <div class="summary-label">${escapeHtml(t.directSubscription)}</div>
-                    <div class="detail-link">${escapeHtml(selected.url)}</div>
+                    <div class="detail-link">${escapeHtml(displayUrl)}</div>
                 </div>
                 <div class="detail-actions"></div>
             `;
@@ -1459,8 +1593,30 @@
             copyBtn.type = "button";
             copyBtn.className = "mini-btn";
             copyBtn.textContent = t.copyLink;
-            copyBtn.addEventListener("click", () => copyText(selected.url));
+            copyBtn.addEventListener("click", async () => {
+                try {
+                    if (selected.secureAction) {
+                        const link = await getProtectedHappLink(selected.variant);
+                        await copyText(link);
+                        return;
+                    }
+                    await copyText(resolveFormatUrl(selected.id));
+                } catch (error) {
+                    showToast(t.copyFailed);
+                }
+            });
             actions.appendChild(copyBtn);
+
+            if (selected.secureAction) {
+                const openBtn = document.createElement("button");
+                openBtn.type = "button";
+                openBtn.className = "mini-btn";
+                openBtn.textContent = t.openInApp;
+                openBtn.addEventListener("click", () => {
+                    window.location.href = buildHappLaunchRoute(selected.variant);
+                });
+                actions.appendChild(openBtn);
+            }
 
             panel.appendChild(card);
         }

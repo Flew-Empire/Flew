@@ -6,7 +6,7 @@ from typing import Dict, Tuple
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.db import Session, crud, get_db
 from app.dependencies import get_validated_sub, get_validated_sub_opaque, validate_dates
@@ -54,6 +54,11 @@ client_config = {
 }
 
 router = APIRouter(tags=['Subscription'], prefix=f'/{XRAY_SUBSCRIPTION_PATH}')
+HAPP_LAUNCH_VARIANTS = {
+    "happ-v5": "v5",
+    "happ-v4": "v4",
+    "happ-v3": "v3",
+}
 
 
 def encode_announce(text: str) -> str:
@@ -67,6 +72,11 @@ def _is_happ_user_agent(user_agent: str) -> bool:
 def _strip_client_type_suffix(url: str) -> str:
     parts = urlsplit(url)
     path = parts.path.rstrip("/")
+    for variant in HAPP_LAUNCH_VARIANTS.keys():
+        suffix = f"/launch/{variant}"
+        if path.endswith(suffix):
+            path = path[: -len(suffix)]
+            return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
     for client_type in client_config.keys():
         suffix = f"/{client_type}"
         if path.endswith(suffix):
@@ -96,6 +106,31 @@ def _with_hide_settings(url: str) -> str:
     return urlunsplit(
         (parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment)
     )
+
+
+def _build_happ_launch_link(request: Request, variant: str) -> str:
+    version = HAPP_LAUNCH_VARIANTS.get((variant or "").strip().lower())
+    if not version:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    page_subscription_url = _subscription_page_url(request)
+    hidden_subscription_url = _with_hide_settings(page_subscription_url)
+    link = create_happ_crypto_link(hidden_subscription_url, version, True)
+    if not link:
+        raise HTTPException(status_code=404, detail="Not Found")
+    return link
+
+
+def _happ_launch_response(request: Request, variant: str) -> Response:
+    headers = {
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+        "pragma": "no-cache",
+        "expires": "0",
+    }
+    link = _build_happ_launch_link(request, variant)
+    if (request.query_params.get("mode") or "").strip().lower() == "text":
+        return Response(content=link, media_type="text/plain", headers=headers)
+    return RedirectResponse(url=link, status_code=302, headers=headers)
 
 
 def _wants_subscription_page(request: Request, user_agent: str) -> bool:
@@ -428,9 +463,7 @@ def _serve_subscription_response(
             render_template(
                 SUBSCRIPTION_PAGE_TEMPLATE,
                 {
-                    "page_payload_b64": base64.b64encode(
-                        json.dumps(page_payload, ensure_ascii=False).encode("utf-8")
-                    ).decode("ascii"),
+                    "page_payload": page_payload,
                     "meta_title": page_payload["branding"]["title"],
                     "meta_description": f'{page_payload["branding"]["title"]} subscription page for {user.username}',
                 },
@@ -667,6 +700,17 @@ def user_get_usage_opaque(
     return {"usages": usages, "username": dbuser.username}
 
 
+@router.get("/{opaque_a}/{opaque_b}/launch/{variant}", include_in_schema=False)
+def user_subscription_happ_launch_opaque(
+    request: Request,
+    opaque_a: str = Path(...),
+    opaque_b: str = Path(...),
+    variant: str = Path(..., pattern="happ-v5|happ-v4|happ-v3"),
+    dbuser: UserResponse = Depends(get_validated_sub_opaque),
+):
+    return _happ_launch_response(request, variant)
+
+
 @router.get("/{opaque_a}/{opaque_b}/{client_type}", include_in_schema=False)
 def user_subscription_with_client_type_opaque(
     request: Request,
@@ -730,3 +774,13 @@ def user_subscription_with_client_type(
         current_subscription_url=_preferred_subscription_url(request, client_type),
         client_type=client_type,
     )
+
+
+@router.get("/{token}/launch/{variant}", include_in_schema=False)
+def user_subscription_happ_launch(
+    request: Request,
+    token: str = Path(...),
+    variant: str = Path(..., pattern="happ-v5|happ-v4|happ-v3"),
+    dbuser: UserResponse = Depends(get_validated_sub),
+):
+    return _happ_launch_response(request, variant)
