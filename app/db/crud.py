@@ -182,6 +182,13 @@ def _ensure_admin_limit_columns() -> None:
                     conn.execute(
                         text("ALTER TABLE admins ADD COLUMN device_limit INTEGER")
                     )
+                if "subscription_url_prefix" not in columns:
+                    conn.execute(
+                        text(
+                            "ALTER TABLE admins "
+                            "ADD COLUMN subscription_url_prefix VARCHAR(512)"
+                        )
+                    )
                 if "is_disabled" not in columns:
                     conn.execute(
                         text(
