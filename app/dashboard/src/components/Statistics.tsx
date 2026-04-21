@@ -8,29 +8,6 @@ import useGetUser from "hooks/useGetUser";
 import { fetch } from "service/http";
 import { formatBytes, numberWithCommas } from "utils/formatByte";
 
-const ONLINE_WINDOW_SECONDS = 24 * 60 * 60;
-
-const parseOnlineAtTs = (value: unknown): number | null => {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) return null;
-    if (value > 1e12) return Math.floor(value / 1000);
-    if (value > 1e9) return Math.floor(value);
-    return null;
-  }
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const asNum = Number(raw);
-  if (Number.isFinite(asNum)) {
-    if (asNum > 1e12) return Math.floor(asNum / 1000);
-    if (asNum > 1e9) return Math.floor(asNum);
-  }
-  let ms = new Date(raw).getTime();
-  if (!Number.isFinite(ms)) ms = new Date(`${raw}Z`).getTime();
-  if (!Number.isFinite(ms)) return null;
-  return Math.floor(ms / 1000);
-};
-
 type StatCardProps = {
   title: string;
   value: ReactNode;
@@ -78,38 +55,14 @@ export const Statistics: FC<{ mt?: string | number }> = ({ mt }) => {
   const hasSelectedAdminScope = !!selectedAdmin && selectedAdmin !== "__all__";
 
   const fetchScopedStats = async (query: Record<string, any>) => {
-    const [allResp, activeResp, expiredResp, usageResp] = await Promise.all([
-      fetch("/users", { query: { ...query, limit: 1 } }),
-      fetch("/users", { query: { ...query, status: "active", limit: 1 } }),
-      fetch("/users", { query: { ...query, status: "expired", limit: 1 } }),
-      fetch("/users", { query: { ...query, limit: 5000, sort: "-created_at" } }),
-    ]);
-
-    const usage = Array.isArray(usageResp?.users)
-      ? usageResp.users.reduce((sum: number, u: any) => sum + Number(u?.used_traffic || 0), 0)
-      : 0;
-    const usersLimited = Array.isArray(usageResp?.users)
-      ? usageResp.users.filter(
-          (u: any) => String(u?.status || "").toLowerCase() === "limited"
-        ).length
-      : 0;
-    const usersOnline = Array.isArray(usageResp?.users)
-      ? usageResp.users.filter((u: any) => {
-          const status = String(u?.status || "").toLowerCase();
-          if (status === "connected") return true;
-          const ts = parseOnlineAtTs(u?.online_at);
-          if (!ts) return false;
-          return Math.floor(Date.now() / 1000) - ts <= ONLINE_WINDOW_SECONDS;
-        }).length
-      : 0;
-
+    const stats = await fetch("/users/stats", { query });
     return {
-      users_active: Number(activeResp?.total || 0),
-      total_user: Number(allResp?.total || 0),
-      users_expired: Number(expiredResp?.total || 0),
-      users_limited: Number(usersLimited || 0),
-      users_online: Number(usersOnline || 0),
-      usage,
+      users_active: Number(stats?.users_active || 0),
+      total_user: Number(stats?.total_user || 0),
+      users_expired: Number(stats?.users_expired || 0),
+      users_limited: Number(stats?.users_limited || 0),
+      users_online: Number(stats?.users_online || 0),
+      usage: Number(stats?.usage || 0),
     };
   };
 

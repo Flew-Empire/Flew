@@ -1,5 +1,4 @@
 import json
-import os
 import time
 import jwt
 from base64 import b64decode, b64encode
@@ -95,6 +94,22 @@ def create_subscription_opaque_token(username: str) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     nonce = os.urandom(12)
+    encrypted = _get_subscription_cipher().encrypt(nonce, payload, b"flew-sub")
+    compact = _b64url_encode(nonce + encrypted)
+    split_at = 10 if len(compact) > 24 else max(6, len(compact) // 2)
+    return f"{compact[:split_at]}/{compact[split_at:]}"
+
+
+def create_stable_subscription_opaque_token(username: str, issued_at: int) -> str:
+    safe_username = str(username or "").strip()
+    safe_issued_at = max(1, int(issued_at or 1))
+    payload = json.dumps(
+        {"sub": safe_username, "iat": safe_issued_at},
+        separators=(",", ":"),
+    ).encode("utf-8")
+    nonce = sha256(
+        f"{get_secret_key()}:subscription-stable:{safe_username}".encode("utf-8")
+    ).digest()[:12]
     encrypted = _get_subscription_cipher().encrypt(nonce, payload, b"flew-sub")
     compact = _b64url_encode(nonce + encrypted)
     split_at = 10 if len(compact) > 24 else max(6, len(compact) // 2)

@@ -1,9 +1,9 @@
 import re
-import secrets
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Union
+from hashlib import sha256
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -12,7 +12,7 @@ from app.models.admin import Admin
 from app.models.proxy import ProxySettings, ProxyTypes
 from app.subscription.share import generate_v2ray_links
 from app.utils.features import feature_enabled
-from app.utils.jwt import create_subscription_opaque_token
+from app.utils.jwt import create_stable_subscription_opaque_token
 from app.flew.happ_crypto_auto_service import get_cached_or_create_happ_crypto_link
 from app.flew.hwid_lock_service import has_hwid_protection
 from app.flew.v2box_hwid_service import get_required_v2box_device_id_for_username
@@ -310,13 +310,20 @@ class UserResponse(User):
     @model_validator(mode="after")
     def validate_subscription_url(self):
         if not self.subscription_url:
-            salt = secrets.token_hex(8)
+            created_at_ts = 1
+            if getattr(self, "created_at", None):
+                try:
+                    created_at_ts = int(self.created_at.timestamp())
+                except Exception:
+                    created_at_ts = 1
+            stable_seed = f"{self.username}:{created_at_ts}"
+            salt = sha256(stable_seed.encode("utf-8")).hexdigest()[:16]
             # Per-admin subscription URL prefix (falls back to global)
             admin_prefix = None
             if self.admin and hasattr(self.admin, 'subscription_url_prefix'):
                 admin_prefix = self.admin.subscription_url_prefix
             url_prefix = (admin_prefix or XRAY_SUBSCRIPTION_URL_PREFIX).replace('*', salt).strip("/")
-            token = create_subscription_opaque_token(self.username)
+            token = create_stable_subscription_opaque_token(self.username, created_at_ts)
             self.subscription_url = f"{url_prefix}/{XRAY_SUBSCRIPTION_PATH}/{token}"
         # Keep all optional query flags in one place to avoid duplicated/invalid URLs.
         try:
