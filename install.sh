@@ -78,6 +78,15 @@ disable_system_xray() {
     fi
 }
 
+disable_nginx_for_http_only() {
+    if [ "$SKIP_NGINX" = true ] || [ -z "$PANEL_DOMAIN" ]; then
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl stop nginx >/dev/null 2>&1 || true
+            systemctl disable nginx >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
 clone_repo() {
     # Avoid deleting the current working directory when the installer
     # itself is launched from inside INSTALL_DIR.
@@ -180,6 +189,7 @@ echo "Installing Flew Free..."
 install_packages
 install_xray
 disable_system_xray
+disable_nginx_for_http_only
 clone_repo
 setup_venv
 write_env
