@@ -378,6 +378,15 @@ class UsersResponse(BaseModel):
     total: int
 
 
+class UsersStatsResponse(BaseModel):
+    total_user: int
+    users_active: int
+    users_expired: int
+    users_limited: int
+    users_online: int
+    usage: int
+
+
 class UserUsageResponse(BaseModel):
     node_id: Union[int, None] = None
     node_name: str

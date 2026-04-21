@@ -14,6 +14,7 @@ from app.models.user import (
     UserModify,
     UserResponse,
     UsersResponse,
+    UsersStatsResponse,
     UserStatus,
     UsersUsagesResponse,
     UserUsagesResponse,
@@ -116,6 +117,15 @@ def _sync_many_users_reset(usernames: List[str]) -> None:
             panel_sync_service.reset_user_in_enabled_targets(username)
         except Exception:
             logger.exception("Panel bulk reset sync failed for user %s", username)
+
+
+def _resolve_owner_scope(admin: Admin, owner: Optional[List[str]]) -> tuple[Optional[List[str]], bool]:
+    admins_filter = owner if admin.is_sudo else [admin.username]
+    unassigned_only = False
+    if admin.is_sudo and owner and "__sudo_self__" in owner:
+        admins_filter = None
+        unassigned_only = True
+    return admins_filter, unassigned_only
 
 
 def _get_action_actor(db: Session, admin: Admin):
@@ -472,13 +482,8 @@ def get_users(
                     status_code=400, detail=f'"{opt}" is not a valid sort option'
                 )
 
-    unassigned_only = False
     admin_filter = None
-    admins_filter = owner if admin.is_sudo else [admin.username]
-
-    if admin.is_sudo and owner and "__sudo_self__" in owner:
-        unassigned_only = True
-        admins_filter = None
+    admins_filter, unassigned_only = _resolve_owner_scope(admin, owner)
 
     users, count = crud.get_users(
         db=db,
@@ -495,6 +500,21 @@ def get_users(
     )
 
     return {"users": users, "total": count}
+
+
+@router.get("/users/stats", response_model=UsersStatsResponse)
+def get_users_stats(
+    owner: Union[List[str], None] = Query(None, alias="admin"),
+    db: Session = Depends(get_db),
+    admin: Admin = Depends(Admin.get_current),
+):
+    """Get aggregated user statistics for the current admin scope."""
+    admins_filter, unassigned_only = _resolve_owner_scope(admin, owner)
+    return crud.get_users_stats(
+        db=db,
+        admins=admins_filter,
+        unassigned_only=unassigned_only,
+    )
 
 
 @router.post("/users/reset", responses={403: responses._403, 404: responses._404})

@@ -9,7 +9,7 @@ PyYAML==6.0.2
 SQLAlchemy==2.0.40
 alembic==1.18.4
 anyio==4.12.1
-bcrypt==4.3.0
+bcrypt==4.0.1
 certifi==2026.2.25
 cffi==1.17.1
 click==8.1.8

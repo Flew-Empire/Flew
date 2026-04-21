@@ -71,6 +71,13 @@ install_xray() {
     bash <(curl -Ls https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh) install
 }
 
+disable_system_xray() {
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl stop xray >/dev/null 2>&1 || true
+        systemctl disable xray >/dev/null 2>&1 || true
+    fi
+}
+
 clone_repo() {
     # Avoid deleting the current working directory when the installer
     # itself is launched from inside INSTALL_DIR.
@@ -172,6 +179,7 @@ setup_https() {
 echo "Installing Flew Free..."
 install_packages
 install_xray
+disable_system_xray
 clone_repo
 setup_venv
 write_env

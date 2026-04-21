@@ -9,7 +9,7 @@ import string
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union
 
-from sqlalchemy import and_, delete, func, or_, inspect, select, text
+from sqlalchemy import and_, case, delete, func, or_, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session, joinedload
 from sqlalchemy.sql.functions import coalesce
@@ -618,6 +618,55 @@ def get_users(db: Session,
         return query.all(), count
 
     return query.all()
+
+
+def get_users_stats(
+    db: Session,
+    admin: Optional[Admin] = None,
+    admins: Optional[List[str]] = None,
+    unassigned_only: bool = False,
+    hours: int = 24,
+) -> Dict[str, int]:
+    online_since = datetime.utcnow() - timedelta(hours=hours)
+    query = db.query(
+        func.count(User.id).label("total_user"),
+        coalesce(func.sum(case((User.status == UserStatus.active, 1), else_=0)), 0).label("users_active"),
+        coalesce(func.sum(case((User.status == UserStatus.expired, 1), else_=0)), 0).label("users_expired"),
+        coalesce(func.sum(case((User.status == UserStatus.limited, 1), else_=0)), 0).label("users_limited"),
+        coalesce(
+            func.sum(
+                case(
+                    (
+                        and_(
+                            User.online_at.isnot(None),
+                            User.online_at >= online_since,
+                        ),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ),
+            0,
+        ).label("users_online"),
+        coalesce(func.sum(User.used_traffic), 0).label("usage"),
+    )
+
+    if admin:
+        query = query.filter(User.admin == admin)
+    if admins:
+        query = query.filter(User.admin.has(Admin.username.in_(admins)))
+    if unassigned_only:
+        query = query.filter(User.admin == None)
+
+    row = query.one()
+    return {
+        "total_user": int(row.total_user or 0),
+        "users_active": int(row.users_active or 0),
+        "users_expired": int(row.users_expired or 0),
+        "users_limited": int(row.users_limited or 0),
+        "users_online": int(row.users_online or 0),
+        "usage": int(row.usage or 0),
+    }
 
 
 def get_user_usages(db: Session, dbuser: User, start: datetime, end: datetime) -> List[UserUsageResponse]:
