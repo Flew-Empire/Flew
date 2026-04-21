@@ -695,8 +695,8 @@ def set_owner(
 
 @router.get("/users/expired", response_model=List[str])
 def get_expired_users(
-    expired_after: Optional[datetime] = Query(None, example="2024-01-01T00:00:00"),
-    expired_before: Optional[datetime] = Query(None, example="2024-01-31T23:59:59"),
+    expired_after: Optional[datetime] = Query(None, examples=["2024-01-01T00:00:00"]),
+    expired_before: Optional[datetime] = Query(None, examples=["2024-01-31T23:59:59"]),
     db: Session = Depends(get_db),
     admin: Admin = Depends(Admin.get_current),
 ):
@@ -718,8 +718,8 @@ def get_expired_users(
 @router.delete("/users/expired", response_model=List[str])
 def delete_expired_users(
     bg: BackgroundTasks,
-    expired_after: Optional[datetime] = Query(None, example="2024-01-01T00:00:00"),
-    expired_before: Optional[datetime] = Query(None, example="2024-01-31T23:59:59"),
+    expired_after: Optional[datetime] = Query(None, examples=["2024-01-01T00:00:00"]),
+    expired_before: Optional[datetime] = Query(None, examples=["2024-01-31T23:59:59"]),
     db: Session = Depends(get_db),
     admin: Admin = Depends(Admin.get_current),
 ):
