@@ -197,7 +197,7 @@ else
   nginx
 fi
 
-echo "Nginx now serves only HTTPS on 443; port 80 remains free for Xray."
+echo "Nginx now serves only HTTPS on 443; port 80 stays free for HTTP and nginx."
 trap - EXIT
 
 echo "HTTPS panel configured for ${DOMAIN}"
